@@ -19,18 +19,15 @@ fi
 # Install dependencies
 echo "[1/7] Installing system dependencies..."
 sudo apt-get update
-sudo apt-get install -y python3 python3-pip git
-
-echo "[2/7] Installing Python MQTT library..."
-pip3 install --user paho-mqtt
+sudo apt-get install -y python3 python3-pip python3-paho-mqtt git
 
 # Create log directory
-echo "[3/7] Creating log directory..."
+echo "[2/7] Creating log directory..."
 sudo mkdir -p /var/log/folklore-bot
 sudo chown stellarhopper:stellarhopper /var/log/folklore-bot
 
 # Clone or update repository
-echo "[4/7] Setting up repository..."
+echo "[3/7] Setting up repository..."
 if [ ! -d "/home/stellarhopper/folklore" ]; then
     echo "Cloning repository..."
     cd /home/stellarhopper
@@ -42,12 +39,15 @@ else
 fi
 
 # Install bot dependencies
-echo "[5/7] Installing bot dependencies..."
+echo "[4/7] Installing bot dependencies..."
 cd /home/stellarhopper/folklore
-pip3 install --user -r requirements.txt
+sudo apt-get install -y python3-aiohttp python3-bs4 python3-dotenv
+# Note: discord.py not in Debian repos, needs venv or --break-system-packages
+pip3 install --user --break-system-packages -r requirements.txt 2>/dev/null || \
+    pip3 install --user -r requirements.txt
 
 # Setup MQTT credentials
-echo "[6/7] Setting up MQTT credentials..."
+echo "[5/7] Setting up MQTT credentials..."
 if [ ! -f "/home/stellarhopper/folklore/deploy/.env.mqtt" ]; then
     read -sp "Enter MQTT password: " mqtt_password
     echo
@@ -63,7 +63,7 @@ chmod +x /home/stellarhopper/folklore/deploy/deploy.sh
 chmod +x /home/stellarhopper/folklore/deploy/mqtt_subscriber.py
 
 # Install systemd services
-echo "[7/7] Installing systemd services..."
+echo "[6/7] Installing systemd services..."
 
 # Install bot service
 sudo cp /home/stellarhopper/folklore/deploy/folklore-bot.service /etc/systemd/system/
