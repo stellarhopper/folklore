@@ -312,7 +312,7 @@ class KernelBot(commands.Bot):
             # Create info embed
             embed = discord.Embed(
                 title="🤖 Folklore Discord Bot",
-                description="⚠️ **WARNING: This bot is completely AI-generated slop. User beware.** ⚠️\n\nLinux kernel monitoring and notification bot",
+                description="Linux kernel monitoring and notification bot",
                 color=0x00ff00,
                 url="https://github.com/stellarhopper/folklore"
             )
