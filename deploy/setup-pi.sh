@@ -77,6 +77,11 @@ sudo systemctl daemon-reload
 sudo systemctl enable mqtt-deployer
 echo "✓ Installed mqtt-deployer.service"
 
+# Install sudoers file for deployment
+sudo cp /home/stellarhopper/folklore/deploy/folklore-sudoers /etc/sudoers.d/folklore
+sudo chmod 440 /etc/sudoers.d/folklore
+echo "✓ Installed sudoers configuration"
+
 echo
 echo "========================================="
 echo "Setup Complete!"
