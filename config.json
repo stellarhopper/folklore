@@ -1,0 +1,23 @@
+{
+  "discord": {
+    "channel": "bot-spam"
+  },
+  "kernel": {
+    "check_interval_minutes": 30,
+    "subsystems": [
+      {
+        "name": "linux-cxl",
+        "lore_url": "https://lore.kernel.org/linux-cxl/"
+      },
+      {
+        "name": "nvdimm",
+        "lore_url": "https://lore.kernel.org/nvdimm/"
+      },
+      {
+        "name": "x86",
+        "lore_url": "https://lore.kernel.org/all/?q=tc:x86@kernel.org"
+      }
+    ]
+  },
+  "phb_url": "https://phb-crystal-ball.sipsolutions.net/"
+}
