@@ -1,0 +1,30 @@
+name: Deploy to Raspberry Pi
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  notify-deployment:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send MQTT deployment trigger
+        run: |
+          # Install mosquitto clients for MQTT publishing
+          sudo apt-get update
+          sudo apt-get install -y mosquitto-clients
+
+          # Publish deployment message
+          mosquitto_pub \
+            -h 7bc60cfe8a37497d8f627acb66ce353c.s1.eu.hivemq.cloud \
+            -p 8883 \
+            -t "folklore/deploy" \
+            -m "deploy" \
+            -u "folklore-mqtt" \
+            -P "${{ secrets.MQTT_PASSWORD }}" \
+            --capath /etc/ssl/certs/ \
+            -d
+
+          echo "Deployment notification sent to Raspberry Pi via MQTT"

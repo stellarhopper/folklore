@@ -1,0 +1,28 @@
+[Unit]
+Description=Folklore MQTT Deployment Listener
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=stellarhopper
+WorkingDirectory=/home/stellarhopper/folklore/deploy
+ExecStart=/usr/bin/python3 /home/stellarhopper/folklore/deploy/mqtt_subscriber.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/folklore-bot/mqtt-deployer.log
+StandardError=append:/var/log/folklore-bot/mqtt-deployer.log
+
+# Environment
+Environment="PYTHONUNBUFFERED=1"
+Environment="MQTT_BROKER=7bc60cfe8a37497d8f627acb66ce353c.s1.eu.hivemq.cloud"
+Environment="MQTT_PORT=8883"
+Environment="MQTT_USERNAME=folklore-mqtt"
+EnvironmentFile=/home/stellarhopper/folklore/deploy/.env.mqtt
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
