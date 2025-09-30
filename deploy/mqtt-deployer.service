@@ -21,7 +21,7 @@ Environment="MQTT_USERNAME=folklore-mqtt"
 EnvironmentFile=/home/stellarhopper/folklore/deploy/.env.mqtt
 
 # Security
-NoNewPrivileges=true
+# NoNewPrivileges disabled to allow sudo for service restart
 PrivateTmp=true
 
 [Install]
