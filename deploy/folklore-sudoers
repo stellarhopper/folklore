@@ -1,0 +1,3 @@
+# Allow stellarhopper to restart folklore-bot service without password
+stellarhopper ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart folklore-bot
+stellarhopper ALL=(ALL) NOPASSWD: /usr/bin/systemctl status folklore-bot
