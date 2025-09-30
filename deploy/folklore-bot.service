@@ -1,0 +1,25 @@
+[Unit]
+Description=Folklore Discord Bot - Linux Kernel Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=stellarhopper
+WorkingDirectory=/home/stellarhopper/folklore
+ExecStart=/usr/bin/python3 /home/stellarhopper/folklore/main.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/folklore-bot/output.log
+StandardError=append:/var/log/folklore-bot/error.log
+
+# Environment
+Environment="PYTHONUNBUFFERED=1"
+EnvironmentFile=/home/stellarhopper/folklore/.env
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
