@@ -5,11 +5,13 @@ import asyncio
 import json
 import logging
 import re
+import subprocess
 from datetime import datetime
 from bs4 import BeautifulSoup
 
 from .kernel_monitor import KernelMonitor
 from .lore_monitor import LoreMonitor
+from version import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +41,14 @@ class KernelBot(commands.Bot):
             description="Predict next 3 kernel release dates",
             callback=self.phb_callback
         )
+        info_cmd = discord.app_commands.Command(
+            name="info",
+            description="Display bot information and version",
+            callback=self.info_callback
+        )
         self.tree.add_command(ver_cmd)
         self.tree.add_command(phb_cmd)
+        self.tree.add_command(info_cmd)
 
         # Initialize monitors
         self.kernel_monitor = KernelMonitor()
@@ -281,6 +289,59 @@ class KernelBot(commands.Bot):
         except Exception as e:
             logger.error(f"Error in phb command: {e}")
             await interaction.followup.send("❌ Error fetching PHB predictions")
+
+    async def info_callback(self, interaction: discord.Interaction):
+        """Slash command to display bot info and version"""
+        await interaction.response.defer()
+
+        try:
+            # Get git commit SHA
+            git_sha = "unknown"
+            try:
+                result = subprocess.run(
+                    ['git', 'rev-parse', '--short', 'HEAD'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    git_sha = result.stdout.strip()
+            except Exception as e:
+                logger.warning(f"Could not get git SHA: {e}")
+
+            # Create info embed
+            embed = discord.Embed(
+                title="🤖 Folklore Discord Bot",
+                description="⚠️ **WARNING: This bot is completely AI-generated slop. User beware.** ⚠️\n\nLinux kernel monitoring and notification bot",
+                color=0x00ff00,
+                url="https://github.com/stellarhopper/folklore"
+            )
+
+            embed.add_field(
+                name="Version",
+                value=f"`{__version__}` (git: `{git_sha}`)",
+                inline=False
+            )
+
+            embed.add_field(
+                name="Repository",
+                value="[github.com/stellarhopper/folklore](https://github.com/stellarhopper/folklore)",
+                inline=False
+            )
+
+            embed.add_field(
+                name="Features",
+                value="• Kernel release monitoring\n• Subsystem activity tracking\n• PHB crystal ball predictions",
+                inline=False
+            )
+
+            embed.set_footer(text="Auto-deployed via MQTT • Running on Raspberry Pi 5")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Error in info command: {e}")
+            await interaction.followup.send("❌ Error fetching bot info")
 
     async def close(self):
         """Clean up when bot shuts down"""
