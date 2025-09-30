@@ -24,7 +24,8 @@ cd "$DEPLOY_DIR"
 
 # Install/update dependencies
 echo "[$(date)] Installing dependencies..." | tee -a "$LOG_FILE"
-pip3 install --user -r requirements.txt
+pip3 install --user --break-system-packages -r requirements.txt 2>/dev/null || \
+    pip3 install --user -r requirements.txt
 
 # Restart the service
 echo "[$(date)] Restarting bot service..." | tee -a "$LOG_FILE"
