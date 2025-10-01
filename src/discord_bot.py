@@ -172,17 +172,30 @@ class KernelBot(commands.Bot):
                         color=0x00aa00,
                         url=pr['url']
                     )
+                    # Add git commit URL if available
+                    if 'commit_url' in pr:
+                        embed.add_field(
+                            name="Commit",
+                            value=f"[View in git]({pr['commit_url']})",
+                            inline=False
+                        )
                     await self.send_to_all_channels(embed=embed)
 
                 # Check for git pull requests
                 git_pulls = await monitor.check_git_pull_requests()
                 for pull in git_pulls:
                     embed = discord.Embed(
-                        title="📥 Git Pull Request",
+                        title="📥 Pull Request Submitted",
                         description=f"**{pull['subsystem']}**: {pull['subject']}",
                         color=0x0066cc,
                         url=pull['url']
                     )
+                    embed.add_field(
+                        name="From",
+                        value=pull.get('from', 'Unknown'),
+                        inline=True
+                    )
+                    embed.set_footer(text="Waiting to be merged")
                     await self.send_to_all_channels(embed=embed)
 
         except Exception as e:

@@ -16,22 +16,27 @@ A Discord bot that monitors Linux kernel releases and subsystem activity, postin
 
 ### 1. Install Dependencies
 
-First, install Python development headers (required for aiohttp):
+First, install system dependencies:
 
 **Fedora/RHEL/CentOS:**
 ```bash
-sudo dnf install python3-devel gcc
+sudo dnf install python3-devel gcc lei
+pip install b4
 ```
 
 **Ubuntu/Debian:**
 ```bash
-sudo apt install python3-dev build-essential
+sudo apt install python3-dev build-essential lei b4
 ```
 
 Then install Python dependencies:
 ```bash
 pip install -r requirements.txt
 ```
+
+**Required Tools:**
+- `lei` - Local Email Interface for querying lore.kernel.org mailing lists
+- `b4` - Tool for fetching kernel patches and mbox files from lore
 
 ### 2. Create Discord Bot
 
