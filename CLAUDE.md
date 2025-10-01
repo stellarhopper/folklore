@@ -50,6 +50,17 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 
 ## Technical Implementation
 
+### Lore Monitoring with lei/b4
+- **Replaced HTML scraping** with lei (Local Email Interface) for reliable mailing list queries
+- **lei queries**: Use `-I https://lore.kernel.org/all/` with `-f json` for structured output
+- **Query format**: `tc:MAILING_LIST AND dt:DAYS.days.ago..` for date-filtered searches
+- **Message fetching**: Use `b4 mbox --single-message` to fetch individual pr-tracker-bot responses
+  - Previously used `b4 am` which fetched entire threads (wrong messages)
+- **Git URL extraction**: Regex match `https://git\.kernel\.org/[^\s]+` from pr-tracker-bot content
+- **PR detection logic**:
+  - **Merged PRs**: sender matches `pr-tracker-bot@kernel.org` (these are merge confirmations)
+  - **Submitted PRs**: subject contains `[GIT PULL]`, NOT from pr-tracker-bot, NOT starting with "re:" (case-insensitive)
+
 ### Command Registration
 - **Issue Resolved**: Slash commands had signature mismatch errors
 - **Solution**: Use explicit `discord.app_commands.Command` objects with callbacks
@@ -64,6 +75,8 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 - aiohttp>=3.8.0
 - beautifulsoup4>=4.12.0
 - python-dotenv>=1.0.0
+- **lei** (system tool) - Local Email Interface for querying lore.kernel.org
+- **b4** (pip package) - Tool for fetching kernel patches and email content
 
 ### File Structure
 ```
@@ -90,7 +103,7 @@ requirements.txt       # Python dependencies
     "channel": "bot-spam"  // Channel name in all servers
   },
   "kernel": {
-    "check_interval_minutes": 30,
+    "check_interval_minutes": 60,  // How often to check for updates
     "subsystems": [...]    // List of {name, lore_url} objects
   },
   "phb_url": "https://phb-crystal-ball.sipsolutions.net/"
@@ -123,41 +136,39 @@ requirements.txt       # Python dependencies
 ### ✅ Tested and Working
 - **Bot startup and connection** - Successfully connects to Discord
 - **Slash command registration** - Commands appear and sync properly
-- **`/ver` command** - Returns correct kernel version (fixed sorting bug, now shows v6.17 stable)
+- **`/ver` command** - Returns correct kernel version (fixed sorting bug, shows v6.17 stable)
 - **`/phb` command** - Returns correct predictions with merge window and release dates
+- **`/info` command** - Shows bot version, git SHA, features, and repository link
 - **Multi-server support** - Bot finds channels across multiple servers
 - **Environment variable loading** - Discord token loaded from DISCORD_TOKEN
 - **Configuration loading** - config.json parsed correctly
 - **Command permissions** - Works after proper bot invite with applications.commands scope
+- **lei integration** - Successfully queries lore.kernel.org with JSON output
+- **b4 integration** - Fetches individual pr-tracker-bot messages with --single-message
+- **PR merge detection** - Detects pr-tracker-bot@kernel.org messages indicating merges
+- **Git commit URL extraction** - Extracts and displays git.kernel.org commit URLs in Discord
+- **Original PR detection** - Detects [GIT PULL] requests, filters out "Re:" replies (case-insensitive)
+- **Message deduplication** - Uses seen_messages set to avoid duplicate notifications
+- **Mailing list queries** - Correctly handles linux-cxl, nvdimm, and x86 (with tc: filter)
 
 ### ⚠️ Generated but Untested
-- **Kernel release monitoring** - Automated detection of new releases (30min intervals)
+- **Kernel release monitoring** - Automated detection of new releases (60min intervals)
   - `check_kernel_releases()` task scheduled but not verified with actual new release
   - Notification posting to channels when new release detected
   - Previous tag tracking to avoid duplicate notifications
-- **Subsystem monitoring** - Lore mailing list parsing and notifications
-  - `check_subsystem_activity()` task scheduled but not verified
-  - PR merge detection from pr-bot messages
-  - Git pull request detection from [GIT PULL] emails
-  - Lore HTML parsing logic in `lore_monitor.py`
-  - Message deduplication using seen_messages set
 - **Channel discovery on guild join** - `on_guild_join()` handler
-- **Error handling** - Exception handling in monitoring tasks
-- **Logging** - File and console logging setup
+- **Error handling** - Exception handling in monitoring tasks after network failures
 
 ### 🔍 Needs Verification
-- **Lore parsing accuracy** - HTML structure assumptions may need adjustment
-- **Subsystem URL formats** - Especially x86 search filter URL
 - **Message rate limiting** - Discord API limits with multiple channels
-- **Date parsing** - Various lore date formats in `_parse_lore_date()`
 - **Monitoring task restart** - Behavior after network errors or Discord disconnections
+- **Long-term stability** - 24-48 hour continuous operation
 
 ### 📝 Testing Recommendations
-1. **Monitor logs** for the next 24-48 hours to verify scheduled tasks work
-2. **Wait for actual kernel release** to test notification system
-3. **Check subsystem monitoring** by watching for recent PR activity in configured lists
-4. **Test multi-server behavior** by inviting bot to another server
-5. **Verify error recovery** by simulating network issues
+1. **Monitor logs** for the next 24-48 hours to verify scheduled tasks work reliably
+2. **Wait for actual kernel release** to test notification system (v6.18-rc1 expected soon)
+3. **Test multi-server behavior** by inviting bot to another server
+4. **Verify error recovery** by simulating network issues
 
 ## Future Considerations
 - Could add more subsystems to monitor
