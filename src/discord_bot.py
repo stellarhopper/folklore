@@ -54,7 +54,10 @@ class KernelBot(commands.Bot):
         self.kernel_monitor = KernelMonitor()
         self.lore_monitor = LoreMonitor(self.config['kernel']['subsystems'])
 
-        # Start monitoring tasks
+        # Start monitoring tasks with configured interval
+        interval_minutes = self.config['kernel']['check_interval_minutes']
+        self.check_kernel_releases.change_interval(minutes=interval_minutes)
+        self.check_subsystem_activity.change_interval(minutes=interval_minutes)
         self.check_kernel_releases.start()
         self.check_subsystem_activity.start()
 
