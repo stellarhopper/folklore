@@ -221,6 +221,16 @@ class KernelBot(commands.Bot):
                     # Check if we have a Discord message for the original PR submission
                     discord_msg_id = self.message_tracker.get_discord_message_id_by_refs(pr.get('refs', []))
 
+                    # Try to get the original PR details from the refs
+                    original_pr = None
+                    if pr.get('refs'):
+                        # Look through the git_pulls we just processed to find the matching one
+                        for ref in pr['refs']:
+                            matching_pull = next((p for p in git_pulls if p['id'] == ref), None)
+                            if matching_pull:
+                                original_pr = matching_pull
+                                break
+
                     # Build the merged embed
                     embed = discord.Embed(
                         title="✅ PR Merged",
@@ -228,6 +238,15 @@ class KernelBot(commands.Bot):
                         color=0x00aa00,
                         url=pr['url']
                     )
+
+                    # Preserve the "From" field if we found the original PR
+                    if original_pr:
+                        embed.add_field(
+                            name="From",
+                            value=original_pr.get('from', 'Unknown'),
+                            inline=True
+                        )
+
                     # Add git commit URL if available
                     if 'commit_url' in pr:
                         # Extract commit hash from URL (last part after /)
