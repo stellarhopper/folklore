@@ -10,7 +10,8 @@ class MessageTracker:
 
     def __init__(self, storage_path: str = "message_map.json"):
         self.storage_path = Path(storage_path)
-        self.message_map: Dict[str, int] = {}
+        # Map lore message ID to dict of {channel_id: discord_message_id}
+        self.message_map: Dict[str, Dict[int, int]] = {}
         self._load()
 
     def _load(self):
@@ -32,29 +33,29 @@ class MessageTracker:
         except Exception as e:
             logger.error(f"Failed to save message mappings: {e}")
 
-    def store(self, lore_message_id: str, discord_message_id: int):
-        """Store a mapping from lore message ID to Discord message ID"""
-        self.message_map[lore_message_id] = discord_message_id
+    def store(self, lore_message_id: str, channel_message_map: Dict[int, int]):
+        """Store mappings from lore message ID to Discord message IDs per channel"""
+        self.message_map[lore_message_id] = channel_message_map
         self._save()
-        logger.debug(f"Stored mapping: {lore_message_id} -> {discord_message_id}")
+        logger.debug(f"Stored mapping: {lore_message_id} -> {len(channel_message_map)} channels")
 
-    def get_discord_message_id(self, lore_message_id: str) -> Optional[int]:
-        """Get Discord message ID for a lore message ID"""
-        return self.message_map.get(lore_message_id)
+    def get_channel_messages(self, lore_message_id: str) -> Dict[int, int]:
+        """Get dict of {channel_id: discord_message_id} for a lore message ID"""
+        return self.message_map.get(lore_message_id, {})
 
-    def get_discord_message_id_by_refs(self, refs: list) -> Optional[int]:
-        """Get Discord message ID by checking message references"""
+    def get_channel_messages_by_refs(self, refs: list) -> Dict[int, int]:
+        """Get channel message mappings by checking message references"""
         if not refs:
-            return None
+            return {}
 
         # Check each reference to see if we have a mapping
         for ref in refs:
-            discord_msg_id = self.message_map.get(ref)
-            if discord_msg_id:
-                logger.debug(f"Found Discord message via ref: {ref} -> {discord_msg_id}")
-                return discord_msg_id
+            channel_messages = self.message_map.get(ref)
+            if channel_messages:
+                logger.debug(f"Found Discord messages via ref: {ref} -> {len(channel_messages)} channels")
+                return channel_messages
 
-        return None
+        return {}
 
     def cleanup_old_entries(self, max_entries: int = 1000):
         """Keep only the most recent N entries to prevent unbounded growth"""
