@@ -23,7 +23,7 @@ class KernelBot(commands.Bot):
         super().__init__(command_prefix='/', intents=intents)
 
         self.config = config
-        self.target_channels = []  # List of channels matching the configured name
+        self.subscriptions = []  # List of {channel, subsystems} objects
         self.kernel_monitor = None
         self.lore_monitor = None
         self.message_tracker = MessageTracker()
@@ -67,20 +67,34 @@ class KernelBot(commands.Bot):
         """Called when the bot is ready"""
         logger.info(f'{self.user} has connected to Discord!')
 
-        # Find target channels across all guilds
-        self.target_channels = []
-        channel_name = self.config['discord']['channel']
+        # Find channels based on subscriptions
+        self.subscriptions = []
+        for sub_config in self.config['discord']['subscriptions']:
+            guild_id = sub_config['guild_id']
+            channel_name = sub_config['channel']
+            subsystems = sub_config['subsystems']
 
-        for guild in self.guilds:
-            for channel in guild.channels:
-                if channel.name == channel_name and hasattr(channel, 'send'):
-                    self.target_channels.append(channel)
-                    logger.info(f"Found target channel: {channel.name} in {guild.name}")
+            # Find the guild
+            guild = self.get_guild(guild_id)
+            if not guild:
+                logger.warning(f"Guild {guild_id} not found (not in guild or invalid ID)")
+                continue
 
-        if not self.target_channels:
-            logger.warning(f"No channels named '{channel_name}' found in any guild")
+            # Find the channel in this guild
+            channel = discord.utils.get(guild.channels, name=channel_name)
+            if channel and hasattr(channel, 'send'):
+                self.subscriptions.append({
+                    'channel': channel,
+                    'subsystems': subsystems
+                })
+                logger.info(f"Subscribed {guild.name}#{channel.name} to {', '.join(subsystems)}")
+            else:
+                logger.warning(f"Channel '{channel_name}' not found in guild {guild.name}")
+
+        if not self.subscriptions:
+            logger.warning("No valid subscriptions found")
         else:
-            logger.info(f"Monitoring {len(self.target_channels)} channels across {len(self.guilds)} guilds")
+            logger.info(f"Monitoring {len(self.subscriptions)} channel subscriptions")
 
         # Sync slash commands
         try:
@@ -97,54 +111,57 @@ class KernelBot(commands.Bot):
     async def on_guild_join(self, guild):
         """Called when bot joins a new guild"""
         logger.info(f"Joined new guild: {guild.name}")
+        logger.info("Note: Update config.json subscriptions and restart to monitor channels in this guild")
 
-        # Look for the target channel in the new guild
-        channel_name = self.config['discord']['channel']
-        for channel in guild.channels:
-            if channel.name == channel_name and hasattr(channel, 'send'):
-                self.target_channels.append(channel)
-                logger.info(f"Added target channel: {channel.name} in {guild.name}")
+    async def send_to_subscribed_channels(self, subsystem: str, content=None, embed=None):
+        """Send a message to channels subscribed to this subsystem, return dict of {channel_id: message_id}"""
+        if not self.subscriptions:
+            logger.warning("No subscriptions available for sending message")
+            return {}
+
+        message_map = {}
+        for sub in self.subscriptions:
+            # Check if channel is subscribed to this subsystem
+            # "*" means subscribed to all subsystems
+            if "*" in sub['subsystems'] or subsystem in sub['subsystems']:
+                channel = sub['channel']
+                try:
+                    if embed:
+                        msg = await channel.send(embed=embed)
+                    else:
+                        msg = await channel.send(content)
+                    message_map[channel.id] = msg.id
+                    logger.debug(f"Sent {subsystem} message to {channel.guild.name}#{channel.name}")
+                except Exception as e:
+                    logger.error(f"Failed to send {subsystem} message to {channel.guild.name}#{channel.name}: {e}")
+
+        return message_map
+
+    async def edit_channel_message(self, channel_id: int, message_id: int, content=None, embed=None):
+        """Edit a specific message in a specific channel"""
+        # Find the channel from subscriptions
+        channel = None
+        for sub in self.subscriptions:
+            if sub['channel'].id == channel_id:
+                channel = sub['channel']
                 break
 
-    async def send_to_all_channels(self, content=None, embed=None):
-        """Send a message to all target channels and return message IDs"""
-        if not self.target_channels:
-            logger.warning("No target channels available for sending message")
-            return []
-
-        message_ids = []
-        for channel in self.target_channels:
-            try:
-                if embed:
-                    msg = await channel.send(embed=embed)
-                else:
-                    msg = await channel.send(content)
-                message_ids.append(msg.id)
-            except Exception as e:
-                logger.error(f"Failed to send message to {channel.name} in {channel.guild.name}: {e}")
-
-        return message_ids
-
-    async def edit_all_channels(self, message_id: int, content=None, embed=None):
-        """Edit a message in all target channels by message ID"""
-        if not self.target_channels:
-            logger.warning("No target channels available for editing message")
+        if not channel:
+            logger.warning(f"Channel {channel_id} not found in subscriptions")
             return
 
-        for channel in self.target_channels:
-            try:
-                # Fetch the message from the channel
-                msg = await channel.fetch_message(message_id)
-                if msg:
-                    if embed:
-                        await msg.edit(embed=embed, content=content)
-                    else:
-                        await msg.edit(content=content)
-                    logger.info(f"Edited message {message_id} in {channel.name}")
-            except discord.NotFound:
-                logger.debug(f"Message {message_id} not found in {channel.name}")
-            except Exception as e:
-                logger.error(f"Failed to edit message {message_id} in {channel.name}: {e}")
+        try:
+            msg = await channel.fetch_message(message_id)
+            if msg:
+                if embed:
+                    await msg.edit(embed=embed, content=content)
+                else:
+                    await msg.edit(content=content)
+                logger.debug(f"Edited message {message_id} in {channel.guild.name}#{channel.name}")
+        except discord.NotFound:
+            logger.debug(f"Message {message_id} not found in {channel.guild.name}#{channel.name}")
+        except Exception as e:
+            logger.error(f"Failed to edit message {message_id} in {channel.guild.name}#{channel.name}: {e}")
 
     @tasks.loop(minutes=30)
     async def check_kernel_releases(self):
@@ -226,18 +243,19 @@ class KernelBot(commands.Bot):
                     )
                     embed.set_footer(text="Waiting to be merged")
 
-                    # Send and store the Discord message ID
-                    discord_msg_ids = await self.send_to_all_channels(embed=embed)
-                    # Store the mapping from lore message ID to Discord message ID
-                    # We'll use the first channel's message ID as the reference
-                    if discord_msg_ids:
-                        self.message_tracker.store(pull['id'], discord_msg_ids[0])
+                    # Send to subscribed channels and store message IDs
+                    channel_messages = await self.send_to_subscribed_channels(
+                        pull['subsystem'], embed=embed
+                    )
+                    # Store the mapping from lore message ID to channel message IDs
+                    if channel_messages:
+                        self.message_tracker.store(pull['id'], channel_messages)
 
                 # Now check for merged PRs
                 merged_prs = await monitor.check_pr_bot_messages()
                 for pr in merged_prs:
-                    # Check if we have a Discord message for the original PR submission
-                    discord_msg_id = self.message_tracker.get_discord_message_id_by_refs(pr.get('refs', []))
+                    # Check if we have Discord messages for the original PR submission
+                    channel_messages = self.message_tracker.get_channel_messages_by_refs(pr.get('refs', []))
 
                     # Try to get the original PR details from the refs
                     original_pr = None
@@ -325,12 +343,13 @@ class KernelBot(commands.Bot):
                             inline=False
                         )
 
-                    if discord_msg_id:
-                        # Edit the existing message
-                        await self.edit_all_channels(discord_msg_id, embed=embed)
+                    if channel_messages:
+                        # Edit existing messages in each channel
+                        for channel_id, message_id in channel_messages.items():
+                            await self.edit_channel_message(channel_id, message_id, embed=embed)
                     else:
-                        # Post a new message
-                        await self.send_to_all_channels(embed=embed)
+                        # Post new messages to subscribed channels
+                        await self.send_to_subscribed_channels(pr['subsystem'], embed=embed)
 
         except Exception as e:
             logger.error(f"Error checking subsystem activity: {e}")

@@ -1,6 +1,17 @@
 {
   "discord": {
-    "channel": "bot-spam"
+    "subscriptions": [
+      {
+        "guild_id": 1420254013458223158,
+        "channel": "bot-spam",
+        "subsystems": ["*"]
+      },
+      {
+        "guild_id": 1420254013458223158,
+        "channel": "bot-test1",
+        "subsystems": ["linux-cxl", "nvdimm"]
+      }
+    ]
   },
   "kernel": {
     "check_interval_minutes": 60,
