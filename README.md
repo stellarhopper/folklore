@@ -11,8 +11,10 @@ A Discord bot that monitors Linux kernel releases and subsystem activity, postin
 - **Discord Commands**:
   - `/ver` - Get the latest Linux kernel version
   - `/phb` - Get next 3 kernel release date predictions from PHB Crystal Ball
+  - `/pending` - List all unmerged pull requests with age tracking
   - `/info` - Show bot version, git SHA, and features
 - **Per-channel Subscriptions**: Configure which subsystems each channel monitors
+- **Pending PR Tracking**: Automatically tracks unmerged PRs and warns about old ones
 
 ## Setup
 
@@ -134,6 +136,7 @@ https://lore.kernel.org/all/?q=tc:subsystem@kernel.org
 
 - `/ver` - Shows the latest Linux kernel version/tag
 - `/phb` - Shows predicted release dates for the next 3 kernel versions
+- `/pending` - Lists all unmerged pull requests grouped by subsystem
 - `/info` - Shows bot version, git commit SHA, and feature list
 
 ## Monitoring Features
@@ -150,6 +153,10 @@ https://lore.kernel.org/all/?q=tc:subsystem@kernel.org
   - Shows submit date, merge date, and time-to-merge duration
   - Displays commit hash and link to torvalds/linux.git merge commit
 - **Per-channel filtering**: Each subscription only receives notifications for its configured subsystems
+- **Pending PR Tracking**: Automatically tracks unmerged PRs
+  - Use `/pending` command to see all waiting PRs
+  - Shows age of each PR in days
+  - Warns about PRs older than 7 days
 
 ## Logs
 

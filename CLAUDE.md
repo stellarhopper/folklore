@@ -56,6 +56,19 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
   - Version formatting (removed "vv" prefix)
   - Now shows both merge window and release dates
 
+#### `/pending` Command
+- **Function**: List all unmerged pull requests
+- **Output**: Grouped by subsystem, showing age in days
+- **Features**:
+  - Shows how long each PR has been waiting
+  - Warning footer for PRs older than 7 days
+  - Clickable links to lore.kernel.org
+  - Limited to 10 PRs per subsystem for readability
+
+#### `/info` Command
+- **Function**: Show bot information
+- **Output**: Version, git commit SHA, repository link, features list
+
 ### 4. Multi-Server and Multi-Channel Support
 - **Subscription-based routing**: Each guild/channel can subscribe to specific subsystems
 - **Wildcard support**: Use `["*"]` to subscribe to all subsystems
@@ -115,10 +128,11 @@ src/
 ├── discord_bot.py      # Main bot class, commands, monitoring, subscription routing
 ├── kernel_monitor.py   # Kernel release detection
 ├── lore_monitor.py     # Mailing list monitoring with lei/b4
-└── message_tracker.py  # Discord message ID persistence and lookup
+└── message_tracker.py  # Discord message ID persistence, pending PR tracking
 main.py                 # Entry point, config loading, subscription validation
 config.json            # Bot configuration with subscriptions
 message_map.json       # Runtime: lore↔Discord message mappings
+pending_prs.json       # Runtime: unmerged PR tracking with metadata
 requirements.txt       # Python dependencies
 .env.example           # Environment template
 ```
@@ -205,6 +219,9 @@ requirements.txt       # Python dependencies
 - **Chronological processing** - Messages sorted by date, PRs processed before merges
 - **Message deduplication** - Uses seen_messages set to avoid duplicate notifications
 - **Mailing list queries** - Correctly handles linux-cxl, nvdimm, and x86 (with tc: filter)
+- **Pending PR tracking** - Tracks unmerged PRs with metadata (subject, subsystem, from, date, URL)
+- **/pending command** - Lists all pending PRs grouped by subsystem with age indicators
+- **Timeout warnings** - Highlights PRs older than 7 days in footer
 
 ### ⚠️ Generated but Untested
 - **Kernel release monitoring** - Automated detection of new releases (60min intervals)
