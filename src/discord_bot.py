@@ -174,9 +174,11 @@ class KernelBot(commands.Bot):
                     )
                     # Add git commit URL if available
                     if 'commit_url' in pr:
+                        # Extract commit hash from URL (last part after /)
+                        commit_hash = pr['commit_url'].split('/')[-1]
                         embed.add_field(
-                            name="Commit",
-                            value=f"[View in git]({pr['commit_url']})",
+                            name="Merge Commit",
+                            value=f"[`{commit_hash[:12]}`]({pr['commit_url']})",
                             inline=False
                         )
                     await self.send_to_all_channels(embed=embed)
