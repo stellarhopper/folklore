@@ -25,6 +25,12 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 - **Detection**:
   - Merged PRs (pr-bot messages)
   - Git pull requests ([GIT PULL] emails)
+- **Message Update Behavior**:
+  - Posts PR submission message when [GIT PULL] email detected
+  - Updates existing message in-place when pr-tracker-bot confirms merge
+  - Preserves original sender info and adds merge details
+  - Shows submit date, merge date, and time-to-merge duration
+  - Displays commit hash and link to torvalds/linux.git merge commit
 
 ### 3. Discord Commands
 
@@ -42,11 +48,12 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
   - Version formatting (removed "vv" prefix)
   - Now shows both merge window and release dates
 
-### 4. Multi-Server Support
-- **Behavior**: Works across multiple Discord servers
-- **Channel**: Sends to configured channel name in ALL servers bot is in
+### 4. Multi-Server and Multi-Channel Support
+- **Subscription-based routing**: Each guild/channel can subscribe to specific subsystems
+- **Wildcard support**: Use `["*"]` to subscribe to all subsystems
+- **Selective filtering**: Subscribe to specific subsystems like `["linux-cxl", "nvdimm"]`
 - **Commands**: Slash commands work in any channel
-- **No Guild Config**: No server-specific configuration needed
+- **Per-channel message tracking**: PR submission messages update independently per channel when merged
 
 ## Technical Implementation
 
@@ -56,10 +63,23 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 - **Query format**: `tc:MAILING_LIST AND dt:DAYS.days.ago..` for date-filtered searches
 - **Message fetching**: Use `b4 mbox --single-message` to fetch individual pr-tracker-bot responses
   - Previously used `b4 am` which fetched entire threads (wrong messages)
-- **Git URL extraction**: Regex match `https://git\.kernel\.org/[^\s]+` from pr-tracker-bot content
+- **Git URL extraction**: Regex match `https://git\.kernel\.org/torvalds/c/[0-9a-f]+` specifically for merge commits
+  - Previously matched first URL which pointed to subsystem trees, not torvalds merge commits
 - **PR detection logic**:
   - **Merged PRs**: sender matches `pr-tracker-bot@kernel.org` (these are merge confirmations)
   - **Submitted PRs**: subject contains `[GIT PULL]`, NOT from pr-tracker-bot, NOT starting with "re:" (case-insensitive)
+- **Chronological processing**: Messages sorted by date (oldest first) to ensure PRs processed before merges
+  - Critical for proper message editing on bot restart
+
+### Message Tracking and Editing
+- **MessageTracker class**: Persists lore message ID to Discord message ID mappings
+- **Storage**: JSON file (`message_map.json`) with structure `{lore_msg_id: {channel_id: discord_msg_id}}`
+- **Threading support**: Uses email `refs` field from pr-tracker-bot to link merges back to original PRs
+- **Per-channel tracking**: Each subscription channel gets independent message ID for editing
+- **Cleanup**: Automatically keeps only 1000 most recent entries to prevent unbounded growth
+- **Edit flow**:
+  1. PR submitted: Create Discord embed, post to subscribed channels, store message IDs
+  2. PR merged: Lookup original message IDs via `refs`, edit messages in-place with merge details
 
 ### Command Registration
 - **Issue Resolved**: Slash commands had signature mismatch errors
@@ -84,11 +104,13 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 ```
 src/
 ├── __init__.py
-├── discord_bot.py      # Main bot class, commands, monitoring
+├── discord_bot.py      # Main bot class, commands, monitoring, subscription routing
 ├── kernel_monitor.py   # Kernel release detection
-└── lore_monitor.py     # Mailing list monitoring
-main.py                 # Entry point, config loading
-config.json            # Bot configuration
+├── lore_monitor.py     # Mailing list monitoring with lei/b4
+└── message_tracker.py  # Discord message ID persistence and lookup
+main.py                 # Entry point, config loading, subscription validation
+config.json            # Bot configuration with subscriptions
+message_map.json       # Runtime: lore↔Discord message mappings
 requirements.txt       # Python dependencies
 .env.example           # Environment template
 ```
@@ -102,7 +124,18 @@ requirements.txt       # Python dependencies
 ```json
 {
   "discord": {
-    "channel": "bot-spam"  // Channel name in all servers
+    "subscriptions": [
+      {
+        "guild_id": 1420254013458223158,
+        "channel": "bot-spam",
+        "subsystems": ["*"]  // "*" for all subsystems
+      },
+      {
+        "guild_id": 1420254013458223158,
+        "channel": "bot-test1",
+        "subsystems": ["linux-cxl", "nvdimm"]  // Specific subsystems
+      }
+    ]
   },
   "kernel": {
     "check_interval_minutes": 60,  // How often to check for updates
@@ -128,10 +161,13 @@ requirements.txt       # Python dependencies
 - `/phb` - Should show v6.18, v6.19, v6.20 predictions with dates
 
 ### Monitoring Behavior
-- **Releases**: Posts to all configured channels when new kernel detected
-- **Subsystems**: Posts PR merges and git pulls to all configured channels
-- **Frequency**: Checks every 30 minutes
+- **Releases**: Posts to all subscribed channels when new kernel detected
+- **Subsystems**: Posts to channels subscribed to each subsystem (filtered or wildcard)
+- **Frequency**: Checks every interval configured in `kernel.check_interval_minutes` (default 60)
 - **Startup**: Only notifies on changes after first run (no spam on restart)
+- **Message lifecycle**:
+  - PR submitted → posts "🔔 PR Submitted" with From, Subject, Submit Date
+  - PR merged → edits existing message to "✅ PR Merged" with Merge Commit, Merge Date, Duration
 
 ## Testing Status
 
@@ -142,14 +178,23 @@ requirements.txt       # Python dependencies
 - **`/phb` command** - Returns correct predictions with merge window and release dates
 - **`/info` command** - Shows bot version, git SHA, features, and repository link
 - **Multi-server support** - Bot finds channels across multiple servers
+- **Subscription-based routing** - Channels receive only subscribed subsystems
+- **Wildcard subscriptions** - `["*"]` receives all subsystem messages
 - **Environment variable loading** - Discord token loaded from DISCORD_TOKEN
-- **Configuration loading** - config.json parsed correctly
+- **Configuration loading** - config.json parsed correctly with subscription validation
 - **Command permissions** - Works after proper bot invite with applications.commands scope
 - **lei integration** - Successfully queries lore.kernel.org with JSON output
-- **b4 integration** - Fetches individual pr-tracker-bot messages with --single-message
+- **b4 integration** - Fetches individual pr-tracker-bot messages with --single-message (requires 0.13.0+)
 - **PR merge detection** - Detects pr-tracker-bot@kernel.org messages indicating merges
-- **Git commit URL extraction** - Extracts and displays git.kernel.org commit URLs in Discord
+- **Git commit URL extraction** - Extracts torvalds/linux.git merge commit URLs (not subsystem trees)
+- **Commit hash display** - Shows first 12 chars of commit hash as clickable link
 - **Original PR detection** - Detects [GIT PULL] requests, filters out "Re:" replies (case-insensitive)
+- **Message editing** - Updates PR submitted messages in-place when merged
+- **Message persistence** - MessageTracker stores and retrieves lore↔Discord mappings
+- **Per-channel tracking** - Each subscribed channel's message edits independently
+- **Date tracking** - Shows submit date, merge date, and time-to-merge duration (e.g., "2d 5h")
+- **Sender preservation** - "From" field preserved during submitted→merged transition
+- **Chronological processing** - Messages sorted by date, PRs processed before merges
 - **Message deduplication** - Uses seen_messages set to avoid duplicate notifications
 - **Mailing list queries** - Correctly handles linux-cxl, nvdimm, and x86 (with tc: filter)
 
@@ -162,15 +207,18 @@ requirements.txt       # Python dependencies
 - **Error handling** - Exception handling in monitoring tasks after network failures
 
 ### 🔍 Needs Verification
-- **Message rate limiting** - Discord API limits with multiple channels
+- **Subscription filtering correctness** - Verify x86 messages appear in bot-spam but not bot-test1
+- **Message rate limiting** - Discord API limits with multiple channels/subscriptions
 - **Monitoring task restart** - Behavior after network errors or Discord disconnections
-- **Long-term stability** - 24-48 hour continuous operation
+- **Long-term stability** - 24-48 hour continuous operation with subscription model
 
 ### 📝 Testing Recommendations
 1. **Monitor logs** for the next 24-48 hours to verify scheduled tasks work reliably
 2. **Wait for actual kernel release** to test notification system (v6.18-rc1 expected soon)
 3. **Test multi-server behavior** by inviting bot to another server
-4. **Verify error recovery** by simulating network issues
+4. **Verify subscription filtering** with x86 messages (should appear in bot-spam only, not bot-test1)
+5. **Verify error recovery** by simulating network issues
+6. **Test message editing** with actual PR submission followed by merge
 
 ## Future Considerations
 - Could add more subsystems to monitor
