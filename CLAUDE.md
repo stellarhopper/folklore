@@ -40,6 +40,13 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 - **Output**: Version, type (stable/RC), embedded message with clickable link to tag commit
 - **Colors**: Dark green (0x008800) for stable, orange (0xffaa00) for RC
 
+#### Color Scheme
+- **PR Submitted**: Blue (0x0066cc)
+- **PR Merged**: Bright green (0x00ff00)
+- **/ver stable**: Dark green (0x008800)
+- **/ver RC**: Orange (0xffaa00)
+- **/phb**: Purple (0x9966ff)
+
 #### `/phb` Command
 - **Function**: Kernel release predictions
 - **Source**: https://phb-crystal-ball.sipsolutions.net/

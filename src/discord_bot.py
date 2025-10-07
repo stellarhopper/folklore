@@ -271,7 +271,7 @@ class KernelBot(commands.Bot):
                     embed = discord.Embed(
                         title="✅ PR Merged",
                         description=f"**{pr['subsystem']}**: {pr['subject']}",
-                        color=0x00aa00,
+                        color=0x00ff00,
                         url=pr['url']
                     )
 
