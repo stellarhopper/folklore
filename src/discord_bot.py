@@ -206,6 +206,24 @@ class KernelBot(commands.Bot):
                         value=pull.get('from', 'Unknown'),
                         inline=True
                     )
+
+                    # Parse and format submit date
+                    try:
+                        submit_date = datetime.fromisoformat(pull['date'])
+                        submit_date_str = submit_date.strftime('%Y-%m-%d %H:%M UTC')
+                    except:
+                        submit_date_str = pull.get('date', 'Unknown')
+
+                    embed.add_field(
+                        name="Submit Date",
+                        value=submit_date_str,
+                        inline=True
+                    )
+                    embed.add_field(
+                        name="Merge Date",
+                        value="—",
+                        inline=True
+                    )
                     embed.set_footer(text="Waiting to be merged")
 
                     # Send and store the Discord message ID
@@ -244,6 +262,56 @@ class KernelBot(commands.Bot):
                         embed.add_field(
                             name="From",
                             value=original_pr.get('from', 'Unknown'),
+                            inline=True
+                        )
+
+                    # Add dates - preserve submit date from original PR if available
+                    submit_date_obj = None
+                    if original_pr:
+                        try:
+                            submit_date_obj = datetime.fromisoformat(original_pr['date'])
+                            submit_date_str = submit_date_obj.strftime('%Y-%m-%d %H:%M UTC')
+                        except:
+                            submit_date_str = original_pr.get('date', 'Unknown')
+                    else:
+                        submit_date_str = "Unknown"
+
+                    # Format merge date and calculate duration
+                    merge_date_obj = None
+                    try:
+                        merge_date_obj = datetime.fromisoformat(pr['date'])
+                        merge_date_str = merge_date_obj.strftime('%Y-%m-%d %H:%M UTC')
+                    except:
+                        merge_date_str = pr.get('date', 'Unknown')
+
+                    embed.add_field(
+                        name="Submit Date",
+                        value=submit_date_str,
+                        inline=True
+                    )
+                    embed.add_field(
+                        name="Merge Date",
+                        value=merge_date_str,
+                        inline=True
+                    )
+
+                    # Calculate and display merge duration
+                    if submit_date_obj and merge_date_obj:
+                        duration = merge_date_obj - submit_date_obj
+                        days = duration.days
+                        hours = duration.seconds // 3600
+                        minutes = (duration.seconds % 3600) // 60
+
+                        if days > 0:
+                            duration_str = f"{days}d {hours}h"
+                        elif hours > 0:
+                            duration_str = f"{hours}h {minutes}m"
+                        else:
+                            duration_str = f"{minutes}m"
+
+                        embed.add_field(
+                            name="Time to Merge",
+                            value=duration_str,
                             inline=True
                         )
 
