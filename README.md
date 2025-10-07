@@ -136,7 +136,7 @@ https://lore.kernel.org/all/?q=tc:subsystem@kernel.org
 
 - `/ver` - Shows the latest Linux kernel version/tag
 - `/phb` - Shows predicted release dates for the next 3 kernel versions
-- `/pending` - Lists all unmerged pull requests grouped by subsystem
+- `/pending` - Lists unmerged pull requests for channel's subscribed subsystems
 - `/info` - Shows bot version, git commit SHA, and feature list
 
 ## Monitoring Features

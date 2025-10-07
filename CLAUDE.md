@@ -59,6 +59,7 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 #### `/pending` Command
 - **Function**: List all unmerged pull requests
 - **Output**: Grouped by subsystem, showing age in days
+- **Filtering**: Only shows PRs for subsystems the channel is subscribed to (respects wildcard "*")
 - **Features**:
   - Shows how long each PR has been waiting
   - Warning footer for PRs older than 7 days
