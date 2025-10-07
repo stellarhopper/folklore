@@ -147,11 +147,16 @@ class LoreMonitor:
                         'date': msg_date.isoformat(),
                         'url': lore_url,
                         'subsystem': subsystem['name'],
-                        'from': sender
+                        'from': sender,
+                        'refs': msg.get('refs', [])  # Message references for threading
                     })
                 except Exception as e:
                     logger.warning(f"Failed to parse message: {e}")
                     continue
+
+            # Sort messages by date (oldest first) to ensure proper processing order
+            # This is especially important on bot restart to handle PRs before their merges
+            messages.sort(key=lambda m: m['date'])
 
             return messages
 

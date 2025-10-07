@@ -5,6 +5,9 @@
 bot.log
 *.log
 
+# Runtime state
+message_map.json
+
 # Python cache
 __pycache__/
 *.pyc
