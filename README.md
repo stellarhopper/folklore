@@ -11,6 +11,8 @@ A Discord bot that monitors Linux kernel releases and subsystem activity, postin
 - **Discord Commands**:
   - `/ver` - Get the latest Linux kernel version
   - `/phb` - Get next 3 kernel release date predictions from PHB Crystal Ball
+  - `/info` - Show bot version, git SHA, and features
+- **Per-channel Subscriptions**: Configure which subsystems each channel monitors
 
 ## Setup
 
@@ -64,10 +66,16 @@ Then edit `config.json` with your settings:
 ```json
 {
   "discord": {
-    "channel": "bot-spam"
+    "subscriptions": [
+      {
+        "guild_id": 1234567890,
+        "channel": "bot-spam",
+        "subsystems": ["*"]
+      }
+    ]
   },
   "kernel": {
-    "check_interval_minutes": 30,
+    "check_interval_minutes": 60,
     "subsystems": [
       {
         "name": "linux-cxl",
@@ -101,7 +109,10 @@ python main.py
 
 ### Discord Settings
 
-- `channel`: Channel name where notifications will be posted
+- `subscriptions`: Array of subscription configurations
+  - `guild_id`: Discord server/guild ID (required)
+  - `channel`: Channel name where notifications will be posted (required)
+  - `subsystems`: Array of subsystem names to monitor, or `["*"]` for all subsystems (required)
 
 ### Kernel Monitoring
 
@@ -123,6 +134,7 @@ https://lore.kernel.org/all/?q=tc:subsystem@kernel.org
 
 - `/ver` - Shows the latest Linux kernel version/tag
 - `/phb` - Shows predicted release dates for the next 3 kernel versions
+- `/info` - Shows bot version, git commit SHA, and feature list
 
 ## Monitoring Features
 
@@ -132,9 +144,12 @@ https://lore.kernel.org/all/?q=tc:subsystem@kernel.org
 - Posts embedded messages with version info
 
 ### Subsystem Activity
-- **Merged PRs**: Detects pr-bot messages about merged pull requests
 - **Git Pull Requests**: Detects [GIT PULL] emails on mailing lists
-- Posts notifications with links to the original messages
+  - Posts notification when PR is submitted
+  - Updates message in-place when PR is merged by pr-tracker-bot
+  - Shows submit date, merge date, and time-to-merge duration
+  - Displays commit hash and link to torvalds/linux.git merge commit
+- **Per-channel filtering**: Each subscription only receives notifications for its configured subsystems
 
 ## Logs
 
