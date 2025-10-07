@@ -241,11 +241,20 @@ class LoreMonitor:
             content = stdout.decode()
             logger.debug(f"b4 output length for {message_id}: {len(content)} bytes")
 
-            # Look for git.kernel.org commit URLs (usually in format https://git.kernel.org/torvalds/c/HASH)
+            # Look for the merge commit URL in torvalds/linux.git
+            # Format: https://git.kernel.org/torvalds/c/COMMIT_HASH
+            # This appears after "has been merged into torvalds/linux.git:" in the message body
+            match = re.search(r'https://git\.kernel\.org/torvalds/c/[0-9a-f]+', content)
+            if match:
+                url = match.group(0)
+                logger.info(f"Found merge commit URL for {message_id}: {url}")
+                return url
+
+            # Fallback: look for any git.kernel.org URL if the specific pattern isn't found
             match = re.search(r'https://git\.kernel\.org/[^\s]+', content)
             if match:
                 url = match.group(0)
-                logger.info(f"Found git URL for {message_id}: {url}")
+                logger.warning(f"Found non-standard git URL for {message_id}: {url}")
                 return url
 
             logger.warning(f"No git.kernel.org URL found in b4 output for {message_id}")
