@@ -365,7 +365,7 @@ class KernelBot(commands.Bot):
                 if tag_info:
                     embed = discord.Embed(
                         title="🐧 Latest Linux Kernel",
-                        color=0x00ff00 if not tag_info['is_rc'] else 0xffaa00
+                        color=0x008800 if not tag_info['is_rc'] else 0xffaa00
                     )
 
                     embed.add_field(
