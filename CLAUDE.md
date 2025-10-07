@@ -76,7 +76,9 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 - beautifulsoup4>=4.12.0
 - python-dotenv>=1.0.0
 - **lei** (system tool) - Local Email Interface for querying lore.kernel.org
-- **b4** (pip package) - Tool for fetching kernel patches and email content
+- **b4** >= 0.13.0 (pip/pipx package) - Tool for fetching kernel patches and email content
+  - Note: Debian's apt package (0.12.0) is too old, use `pipx install b4` instead
+  - The `--single-message` flag is required for git URL extraction
 
 ### File Structure
 ```
