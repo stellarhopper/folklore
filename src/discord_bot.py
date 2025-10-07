@@ -536,7 +536,32 @@ class KernelBot(commands.Bot):
         try:
             from datetime import datetime, timezone
 
-            pending_prs = self.message_tracker.get_pending_prs()
+            # Find subscriptions for this guild/channel
+            guild_id = interaction.guild_id
+            channel_name = interaction.channel.name if interaction.channel else None
+
+            # Get subscribed subsystems for this channel
+            subscribed_subsystems = None
+            for sub in self.subscriptions:
+                if sub['guild_id'] == guild_id and sub['channel'] == channel_name:
+                    subscribed_subsystems = sub['subsystems']
+                    break
+
+            # If no subscription found, default to all subsystems
+            if subscribed_subsystems is None:
+                logger.warning(f"No subscription found for guild {guild_id} channel {channel_name}, showing all PRs")
+                subscribed_subsystems = ["*"]
+
+            # Get all pending PRs
+            all_pending = self.message_tracker.get_pending_prs()
+
+            # Filter by subscribed subsystems
+            pending_prs = []
+            for pr in all_pending:
+                pr_subsystem = pr.get('subsystem', 'unknown')
+                # Include if wildcard or subsystem matches
+                if "*" in subscribed_subsystems or pr_subsystem in subscribed_subsystems:
+                    pending_prs.append(pr)
 
             if not pending_prs:
                 await interaction.followup.send("✅ No pending PRs! All caught up.")
