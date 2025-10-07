@@ -47,9 +47,16 @@ def load_config():
 
 
         # Validate required config
-        if not config.get('discord', {}).get('channel'):
-            logger.error("Discord channel not configured! Please set discord.channel in config.json")
+        subscriptions = config.get('discord', {}).get('subscriptions', [])
+        if not subscriptions:
+            logger.error("No Discord subscriptions configured! Please set discord.subscriptions in config.json")
             sys.exit(1)
+
+        # Validate subscription format
+        for sub in subscriptions:
+            if 'guild_id' not in sub or 'channel' not in sub or 'subsystems' not in sub:
+                logger.error("Invalid subscription format! Each subscription needs guild_id, channel, and subsystems")
+                sys.exit(1)
 
         return config
 
