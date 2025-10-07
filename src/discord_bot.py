@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 from .kernel_monitor import KernelMonitor
 from .lore_monitor import LoreMonitor
+from .message_tracker import MessageTracker
 from version import __version__
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ class KernelBot(commands.Bot):
         self.target_channels = []  # List of channels matching the configured name
         self.kernel_monitor = None
         self.lore_monitor = None
+        self.message_tracker = MessageTracker()
 
     async def setup_hook(self):
         """Called when the bot is starting up"""
@@ -105,19 +107,44 @@ class KernelBot(commands.Bot):
                 break
 
     async def send_to_all_channels(self, content=None, embed=None):
-        """Send a message to all target channels"""
+        """Send a message to all target channels and return message IDs"""
         if not self.target_channels:
             logger.warning("No target channels available for sending message")
+            return []
+
+        message_ids = []
+        for channel in self.target_channels:
+            try:
+                if embed:
+                    msg = await channel.send(embed=embed)
+                else:
+                    msg = await channel.send(content)
+                message_ids.append(msg.id)
+            except Exception as e:
+                logger.error(f"Failed to send message to {channel.name} in {channel.guild.name}: {e}")
+
+        return message_ids
+
+    async def edit_all_channels(self, message_id: int, content=None, embed=None):
+        """Edit a message in all target channels by message ID"""
+        if not self.target_channels:
+            logger.warning("No target channels available for editing message")
             return
 
         for channel in self.target_channels:
             try:
-                if embed:
-                    await channel.send(embed=embed)
-                else:
-                    await channel.send(content)
+                # Fetch the message from the channel
+                msg = await channel.fetch_message(message_id)
+                if msg:
+                    if embed:
+                        await msg.edit(embed=embed, content=content)
+                    else:
+                        await msg.edit(content=content)
+                    logger.info(f"Edited message {message_id} in {channel.name}")
+            except discord.NotFound:
+                logger.debug(f"Message {message_id} not found in {channel.name}")
             except Exception as e:
-                logger.error(f"Failed to send message to {channel.name} in {channel.guild.name}: {e}")
+                logger.error(f"Failed to edit message {message_id} in {channel.name}: {e}")
 
     @tasks.loop(minutes=30)
     async def check_kernel_releases(self):
@@ -163,9 +190,38 @@ class KernelBot(commands.Bot):
         """Check for subsystem activity (merged PRs and git pulls)"""
         try:
             async with self.lore_monitor as monitor:
-                # Check for merged PRs
+                # Check for git pull requests FIRST (before merges)
+                # This ensures we process original PRs before their merge confirmations
+                # which is especially important on bot restarts
+                git_pulls = await monitor.check_git_pull_requests()
+                for pull in git_pulls:
+                    embed = discord.Embed(
+                        title="📥 Pull Request Submitted",
+                        description=f"**{pull['subsystem']}**: {pull['subject']}",
+                        color=0x0066cc,
+                        url=pull['url']
+                    )
+                    embed.add_field(
+                        name="From",
+                        value=pull.get('from', 'Unknown'),
+                        inline=True
+                    )
+                    embed.set_footer(text="Waiting to be merged")
+
+                    # Send and store the Discord message ID
+                    discord_msg_ids = await self.send_to_all_channels(embed=embed)
+                    # Store the mapping from lore message ID to Discord message ID
+                    # We'll use the first channel's message ID as the reference
+                    if discord_msg_ids:
+                        self.message_tracker.store(pull['id'], discord_msg_ids[0])
+
+                # Now check for merged PRs
                 merged_prs = await monitor.check_pr_bot_messages()
                 for pr in merged_prs:
+                    # Check if we have a Discord message for the original PR submission
+                    discord_msg_id = self.message_tracker.get_discord_message_id_by_refs(pr.get('refs', []))
+
+                    # Build the merged embed
                     embed = discord.Embed(
                         title="✅ PR Merged",
                         description=f"**{pr['subsystem']}**: {pr['subject']}",
@@ -181,24 +237,13 @@ class KernelBot(commands.Bot):
                             value=f"[`{commit_hash[:12]}`]({pr['commit_url']})",
                             inline=False
                         )
-                    await self.send_to_all_channels(embed=embed)
 
-                # Check for git pull requests
-                git_pulls = await monitor.check_git_pull_requests()
-                for pull in git_pulls:
-                    embed = discord.Embed(
-                        title="📥 Pull Request Submitted",
-                        description=f"**{pull['subsystem']}**: {pull['subject']}",
-                        color=0x0066cc,
-                        url=pull['url']
-                    )
-                    embed.add_field(
-                        name="From",
-                        value=pull.get('from', 'Unknown'),
-                        inline=True
-                    )
-                    embed.set_footer(text="Waiting to be merged")
-                    await self.send_to_all_channels(embed=embed)
+                    if discord_msg_id:
+                        # Edit the existing message
+                        await self.edit_all_channels(discord_msg_id, embed=embed)
+                    else:
+                        # Post a new message
+                        await self.send_to_all_channels(embed=embed)
 
         except Exception as e:
             logger.error(f"Error checking subsystem activity: {e}")
