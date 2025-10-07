@@ -363,14 +363,18 @@ class KernelBot(commands.Bot):
                 tag_info = await monitor.get_latest_kernel_tag()
 
                 if tag_info:
+                    # Build git.kernel.org commit URL for this tag
+                    tag_url = f"https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?h={tag_info['tag']}"
+
                     embed = discord.Embed(
                         title="🐧 Latest Linux Kernel",
-                        color=0x008800 if not tag_info['is_rc'] else 0xffaa00
+                        color=0x008800 if not tag_info['is_rc'] else 0xffaa00,
+                        url=tag_url
                     )
 
                     embed.add_field(
                         name="Version",
-                        value=tag_info['tag'],
+                        value=f"[{tag_info['tag']}]({tag_url})",
                         inline=True
                     )
 
