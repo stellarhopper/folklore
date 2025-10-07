@@ -26,8 +26,11 @@ pip install b4
 
 **Ubuntu/Debian:**
 ```bash
-sudo apt install python3-dev build-essential lei b4
+sudo apt install python3-dev build-essential lei pipx
+pipx install b4
 ```
+
+**Note:** Debian's apt package for b4 (version 0.12.0) is too old and lacks the `--single-message` flag needed for extracting git commit URLs. Use pipx to install b4 >= 0.13.0 instead.
 
 Then install Python dependencies:
 ```bash

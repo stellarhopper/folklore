@@ -19,7 +19,7 @@ fi
 # Install dependencies
 echo "[1/7] Installing system dependencies..."
 sudo apt-get update
-sudo apt-get install -y python3 python3-pip python3-paho-mqtt git
+sudo apt-get install -y python3 python3-pip python3-paho-mqtt git lei pipx
 
 # Create log directory
 echo "[2/7] Creating log directory..."
@@ -45,6 +45,11 @@ sudo apt-get install -y python3-aiohttp python3-bs4 python3-dotenv
 # Note: discord.py not in Debian repos, needs venv or --break-system-packages
 pip3 install --user --break-system-packages -r requirements.txt 2>/dev/null || \
     pip3 install --user -r requirements.txt
+
+# Install b4 via pipx (Debian's apt version is too old)
+echo "Installing b4 >= 0.13.0 via pipx..."
+pipx install b4
+echo "✓ Installed b4 $(b4 --version)"
 
 # Setup MQTT credentials
 echo "[5/7] Setting up MQTT credentials..."
