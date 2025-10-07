@@ -48,9 +48,15 @@ class KernelBot(commands.Bot):
             description="Display bot information and version",
             callback=self.info_callback
         )
+        pending_cmd = discord.app_commands.Command(
+            name="pending",
+            description="List unmerged pull requests",
+            callback=self.pending_callback
+        )
         self.tree.add_command(ver_cmd)
         self.tree.add_command(phb_cmd)
         self.tree.add_command(info_cmd)
+        self.tree.add_command(pending_cmd)
 
         # Initialize monitors
         self.kernel_monitor = KernelMonitor()
@@ -250,6 +256,8 @@ class KernelBot(commands.Bot):
                     # Store the mapping from lore message ID to channel message IDs
                     if channel_messages:
                         self.message_tracker.store(pull['id'], channel_messages)
+                        # Add to pending PR tracking
+                        self.message_tracker.add_pending_pr(pull['id'], pull)
 
                 # Now check for merged PRs
                 merged_prs = await monitor.check_pr_bot_messages()
@@ -350,6 +358,11 @@ class KernelBot(commands.Bot):
                     else:
                         # Post new messages to subscribed channels
                         await self.send_to_subscribed_channels(pr['subsystem'], embed=embed)
+
+                    # Mark PR as merged (remove from pending list)
+                    if pr.get('refs'):
+                        for ref in pr['refs']:
+                            self.message_tracker.mark_pr_merged(ref)
 
         except Exception as e:
             logger.error(f"Error checking subsystem activity: {e}")
@@ -515,6 +528,76 @@ class KernelBot(commands.Bot):
         except Exception as e:
             logger.error(f"Error in info command: {e}")
             await interaction.followup.send("❌ Error fetching bot info")
+
+    async def pending_callback(self, interaction: discord.Interaction):
+        """Slash command to list pending (unmerged) PRs"""
+        await interaction.response.defer()
+
+        try:
+            from datetime import datetime, timezone
+
+            pending_prs = self.message_tracker.get_pending_prs()
+
+            if not pending_prs:
+                await interaction.followup.send("✅ No pending PRs! All caught up.")
+                return
+
+            # Create embed
+            embed = discord.Embed(
+                title="📋 Pending Pull Requests",
+                description=f"Found {len(pending_prs)} unmerged PR(s)",
+                color=0x0066cc
+            )
+
+            # Group by subsystem
+            by_subsystem = {}
+            for pr in pending_prs:
+                subsystem = pr.get('subsystem', 'unknown')
+                if subsystem not in by_subsystem:
+                    by_subsystem[subsystem] = []
+                by_subsystem[subsystem].append(pr)
+
+            # Add field for each subsystem
+            for subsystem, prs in sorted(by_subsystem.items()):
+                pr_list = []
+                for pr in prs:
+                    # Calculate age
+                    try:
+                        pr_date = datetime.fromisoformat(pr['date'])
+                        age_days = (datetime.now(pr_date.tzinfo) - pr_date).days
+                        age_str = f"{age_days}d" if age_days > 0 else "today"
+                    except Exception:
+                        age_str = "?"
+
+                    # Truncate subject to fit
+                    subject = pr.get('subject', 'Unknown')
+                    if len(subject) > 60:
+                        subject = subject[:57] + "..."
+
+                    pr_list.append(f"[{subject}]({pr.get('url', '#')}) ({age_str})")
+
+                # Add field (Discord limit: 1024 chars per field)
+                field_value = "\n".join(pr_list[:10])  # Limit to 10 PRs per subsystem
+                if len(prs) > 10:
+                    field_value += f"\n_...and {len(prs) - 10} more_"
+
+                embed.add_field(
+                    name=f"**{subsystem}** ({len(prs)})",
+                    value=field_value,
+                    inline=False
+                )
+
+            # Add footer with warning for old PRs
+            old_prs = [pr for pr in pending_prs
+                      if (datetime.now(timezone.utc) - datetime.fromisoformat(pr['date'])).days >= 7]
+            if old_prs:
+                embed.set_footer(text=f"⚠️  {len(old_prs)} PR(s) older than 7 days")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Error in pending command: {e}")
+            await interaction.followup.send("❌ Error fetching pending PRs")
 
     async def close(self):
         """Clean up when bot shuts down"""
