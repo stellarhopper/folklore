@@ -37,7 +37,8 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 #### `/ver` Command
 - **Function**: Shows latest kernel version
 - **Source**: Real-time fetch from git.kernel.org
-- **Output**: Version, type (stable/RC), embedded message
+- **Output**: Version, type (stable/RC), embedded message with clickable link to tag commit
+- **Colors**: Dark green (0x008800) for stable, orange (0xffaa00) for RC
 
 #### `/phb` Command
 - **Function**: Kernel release predictions
