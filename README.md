@@ -133,8 +133,9 @@ python main.py
   - `guild_id`: Discord server/guild ID (required)
   - `channel`: Channel name where notifications will be posted (required)
   - `subsystems`: Array of subsystem names to monitor (required)
-    - `["*"]` - Subscribe to all subsystems and kernel releases
+    - `["*"]` - Subscribe to all subsystems and kernel releases (NOT GitHub releases)
     - `["kernel-release"]` - Subscribe only to kernel/RC announcements
+    - `["ndctl-release"]` - Subscribe to specific GitHub project releases
     - `["linux-cxl", "nvdimm"]` - Subscribe to specific subsystems only
 
 ### Kernel Monitoring
@@ -153,6 +154,15 @@ For subsystems without dedicated mailing lists, use search URLs like:
 https://lore.kernel.org/all/?q=tc:subsystem@kernel.org
 ```
 
+### GitHub Project Monitoring
+
+- `github_projects`: Array of GitHub repositories to monitor for releases
+  - `name`: Identifier for subscriptions (e.g., "ndctl-release")
+  - `repo`: GitHub repository in "owner/repo" format (e.g., "pmem/ndctl")
+  - `description`: Human-readable description for embed titles
+- Only full published releases are monitored (prereleases and drafts are ignored)
+- Release notes are truncated to first 5 lines with a "more..." link
+
 ## Commands
 
 - `/ver` - Shows the latest Linux kernel version/tag
@@ -165,7 +175,15 @@ https://lore.kernel.org/all/?q=tc:subsystem@kernel.org
 ### Kernel Releases
 - Monitors git.kernel.org for new tags
 - Distinguishes between stable releases and release candidates
-- Posts embedded messages with version info
+- Posts embedded messages with version info and clickable links
+- Subscription-based: use "kernel-release" in subsystems (included in "*")
+
+### GitHub Project Releases
+- Monitors configured GitHub repositories for new releases
+- Filters out prereleases and drafts
+- Shows release name, author, tag, and truncated release notes
+- Subscription-based: use project name (e.g., "ndctl-release") in subsystems
+- **Note**: GitHub releases are NOT included in "*" wildcard
 
 ### Subsystem Activity
 - **Git Pull Requests**: Detects [GIT PULL] emails on mailing lists
@@ -178,6 +196,7 @@ https://lore.kernel.org/all/?q=tc:subsystem@kernel.org
   - Use `/pending` command to see all waiting PRs
   - Shows age of each PR in days
   - Warns about PRs older than 7 days
+  - Filtered by channel's subscribed subsystems
 
 ## Logs
 
