@@ -269,12 +269,15 @@ class KernelBot(commands.Bot):
                         truncated = '\n'.join(lines[:5])
                         if len(lines) > 5:
                             truncated += f"\n\n[more...]({release['html_url']})"
+                        notes_value = truncated[:1024]
+                    else:
+                        notes_value = "No release notes"
 
-                        embed.add_field(
-                            name="Release Notes",
-                            value=truncated[:1024] if truncated else "No release notes",
-                            inline=False
-                        )
+                    embed.add_field(
+                        name="Release Notes",
+                        value=notes_value,
+                        inline=False
+                    )
 
                     # Send to channels subscribed to this project's subsystem name
                     await self.send_to_subscribed_channels(project['name'], embed=embed)
