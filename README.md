@@ -73,6 +73,11 @@ Then edit `config.json` with your settings:
         "guild_id": 1234567890,
         "channel": "bot-spam",
         "subsystems": ["*"]
+      },
+      {
+        "guild_id": 1234567890,
+        "channel": "releases",
+        "subsystems": ["kernel-release"]
       }
     ]
   },
@@ -97,6 +102,8 @@ Then edit `config.json` with your settings:
 }
 ```
 
+**Note**: `"*"` includes all subsystems and kernel releases. Use `"kernel-release"` to subscribe only to kernel/RC announcements.
+
 ### 4. Run the Bot
 
 ```bash
@@ -114,7 +121,10 @@ python main.py
 - `subscriptions`: Array of subscription configurations
   - `guild_id`: Discord server/guild ID (required)
   - `channel`: Channel name where notifications will be posted (required)
-  - `subsystems`: Array of subsystem names to monitor, or `["*"]` for all subsystems (required)
+  - `subsystems`: Array of subsystem names to monitor (required)
+    - `["*"]` - Subscribe to all subsystems and kernel releases
+    - `["kernel-release"]` - Subscribe only to kernel/RC announcements
+    - `["linux-cxl", "nvdimm"]` - Subscribe to specific subsystems only
 
 ### Kernel Monitoring
 
