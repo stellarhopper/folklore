@@ -178,17 +178,16 @@ class KernelBot(commands.Bot):
 
                 if new_release:
                     tag_info = new_release['new_tag']
+
+                    # Build git.kernel.org commit URL for this tag
+                    tag_url = f"https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?h={tag_info['tag']}"
+
                     embed = discord.Embed(
                         title="🐧 New Linux Kernel Release!",
-                        description=f"**{tag_info['tag']}** has been released",
-                        color=0x00ff00 if not tag_info['is_rc'] else 0xffaa00,
-                        timestamp=datetime.fromisoformat(tag_info['timestamp'])
-                    )
-
-                    embed.add_field(
-                        name="Version",
-                        value=tag_info['version'],
-                        inline=True
+                        description=f"**[{tag_info['tag']}]({tag_url})** has been released",
+                        color=0x008800 if not tag_info['is_rc'] else 0xffaa00,
+                        url=tag_url,
+                        timestamp=tag_info['timestamp']
                     )
 
                     embed.add_field(
