@@ -134,3 +134,25 @@ class MessageTracker:
             self.message_map = dict(items[-max_entries:])
             self._save()
             logger.info(f"Cleaned up message map, kept {max_entries} entries")
+
+    def cleanup_old_pending_prs(self, max_age_days: int = 21):
+        """Remove pending PRs older than max_age_days"""
+        now = datetime.now()
+        removed = []
+
+        for msg_id, pr_data in list(self.pending_prs.items()):
+            try:
+                pr_date = datetime.fromisoformat(pr_data['date'])
+                age_days = (now.replace(tzinfo=pr_date.tzinfo) - pr_date).days
+
+                if age_days > max_age_days:
+                    del self.pending_prs[msg_id]
+                    removed.append(msg_id)
+            except Exception as e:
+                logger.warning(f"Error checking age of pending PR {msg_id}: {e}")
+
+        if removed:
+            self._save_pending()
+            logger.info(f"Cleaned up {len(removed)} pending PRs older than {max_age_days} days")
+
+        return len(removed)
