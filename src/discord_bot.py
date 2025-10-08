@@ -441,6 +441,9 @@ class KernelBot(commands.Bot):
                         for ref in pr['refs']:
                             self.message_tracker.mark_pr_merged(ref)
 
+                # Cleanup old pending PRs (older than 21 days)
+                self.message_tracker.cleanup_old_pending_prs(max_age_days=21)
+
         except Exception as e:
             logger.error(f"Error checking subsystem activity: {e}")
 
