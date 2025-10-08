@@ -2,7 +2,7 @@ import aiohttp
 import asyncio
 import re
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Optional
 import logging
 
@@ -59,7 +59,7 @@ class KernelMonitor:
                     'tag': f'v{latest_version}',
                     'version': latest_version,
                     'is_rc': '-rc' in latest_version,
-                    'timestamp': datetime.now().isoformat()
+                    'timestamp': datetime.now(timezone.utc)
                 }
 
         except Exception as e:
