@@ -239,7 +239,7 @@ class KernelBot(commands.Bot):
                     embed = discord.Embed(
                         title=f"📦 {project['description']}",
                         description=f"**[{release['tag']}]({release['html_url']})** has been released",
-                        color=0x6f42c1,  # Purple for GitHub releases
+                        color=0x008800,  # Dark green (same as kernel stable releases)
                         url=release['html_url'],
                         timestamp=datetime.fromisoformat(release['published_at'].replace('Z', '+00:00'))
                     )
