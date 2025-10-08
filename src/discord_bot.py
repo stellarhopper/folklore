@@ -203,7 +203,8 @@ class KernelBot(commands.Bot):
                         inline=True
                     )
 
-                    await self.send_to_all_channels(embed=embed)
+                    # Send to channels subscribed to "kernel-release" (or "*")
+                    await self.send_to_subscribed_channels('kernel-release', embed=embed)
 
         except Exception as e:
             logger.error(f"Error checking kernel releases: {e}")
