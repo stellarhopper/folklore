@@ -620,7 +620,8 @@ class KernelBot(commands.Bot):
             # Get subscribed subsystems for this channel
             subscribed_subsystems = None
             for sub in self.subscriptions:
-                if sub['guild_id'] == guild_id and sub['channel'] == channel_name:
+                # Match by channel object (guild_id and name already matched during setup)
+                if sub['channel'].guild.id == guild_id and sub['channel'].name == channel_name:
                     subscribed_subsystems = sub['subsystems']
                     break
 
