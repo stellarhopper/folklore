@@ -14,6 +14,9 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 - **Source**: git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/refs/tags
 - **Function**: Detects new kernel tags/releases every 30 minutes
 - **Logic**: Parses git tags page, sorts versions correctly (stable > RC7 > RC6...)
+- **Subscription**: Uses special subsystem name `"kernel-release"` for filtering
+  - Channels subscribed to `"*"` automatically receive kernel releases
+  - Channels can explicitly subscribe to `"kernel-release"` without `"*"`
 - **Fixed Issue**: Version sorting was broken - stable releases were sorting lower than RCs
 
 ### 2. Subsystem Monitoring
@@ -72,8 +75,9 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 
 ### 4. Multi-Server and Multi-Channel Support
 - **Subscription-based routing**: Each guild/channel can subscribe to specific subsystems
-- **Wildcard support**: Use `["*"]` to subscribe to all subsystems
+- **Wildcard support**: Use `["*"]` to subscribe to all subsystems and kernel releases
 - **Selective filtering**: Subscribe to specific subsystems like `["linux-cxl", "nvdimm"]`
+- **Kernel release subscription**: Add `"kernel-release"` to receive kernel/RC announcements
 - **Commands**: Slash commands work in any channel
 - **Per-channel message tracking**: PR submission messages update independently per channel when merged
 
@@ -151,12 +155,12 @@ requirements.txt       # Python dependencies
       {
         "guild_id": 1420254013458223158,
         "channel": "bot-spam",
-        "subsystems": ["*"]  // "*" for all subsystems
+        "subsystems": ["*"]  // "*" for all subsystems + kernel releases
       },
       {
         "guild_id": 1420254013458223158,
         "channel": "bot-test1",
-        "subsystems": ["linux-cxl", "nvdimm"]  // Specific subsystems
+        "subsystems": ["linux-cxl", "nvdimm", "kernel-release"]  // Specific subsystems + releases
       }
     ]
   },
