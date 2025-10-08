@@ -9,7 +9,7 @@
       {
         "guild_id": 1420254013458223158,
         "channel": "bot-test1",
-        "subsystems": ["linux-cxl", "nvdimm"]
+        "subsystems": ["linux-cxl", "nvdimm", "kernel-release"]
       }
     ]
   },
