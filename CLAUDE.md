@@ -57,6 +57,7 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 - **/ver stable**: Dark green (0x008800)
 - **/ver RC**: Orange (0xffaa00)
 - **/phb**: Purple (0x9966ff)
+- **GitHub releases**: Dark green (0x008800)
 
 #### `/phb` Command
 - **Function**: Kernel release predictions
