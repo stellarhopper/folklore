@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 from .kernel_monitor import KernelMonitor
 from .lore_monitor import LoreMonitor
+from .github_monitor import GitHubMonitor
 from .message_tracker import MessageTracker
 from version import __version__
 
@@ -62,12 +63,24 @@ class KernelBot(commands.Bot):
         self.kernel_monitor = KernelMonitor()
         self.lore_monitor = LoreMonitor(self.config['kernel']['subsystems'])
 
+        # Initialize GitHub monitor if projects are configured
+        github_projects = self.config.get('github_projects', [])
+        if github_projects:
+            self.github_monitor = GitHubMonitor(github_projects)
+        else:
+            self.github_monitor = None
+
         # Start monitoring tasks with configured interval
         interval_minutes = self.config['kernel']['check_interval_minutes']
         self.check_kernel_releases.change_interval(minutes=interval_minutes)
         self.check_subsystem_activity.change_interval(minutes=interval_minutes)
         self.check_kernel_releases.start()
         self.check_subsystem_activity.start()
+
+        # Start GitHub monitoring if configured
+        if self.github_monitor:
+            self.check_github_releases.change_interval(minutes=interval_minutes)
+            self.check_github_releases.start()
 
     async def on_ready(self):
         """Called when the bot is ready"""
@@ -207,6 +220,67 @@ class KernelBot(commands.Bot):
 
         except Exception as e:
             logger.error(f"Error checking kernel releases: {e}")
+
+    @tasks.loop(minutes=30)
+    async def check_github_releases(self):
+        """Periodically check for new GitHub releases"""
+        if not self.github_monitor:
+            return
+
+        try:
+            async with self.github_monitor as monitor:
+                new_releases = await monitor.check_for_new_releases()
+
+                for release_info in new_releases:
+                    project = release_info['project']
+                    release = release_info['release']
+
+                    # Build embed
+                    embed = discord.Embed(
+                        title=f"📦 {project['description']}",
+                        description=f"**[{release['tag']}]({release['html_url']})** has been released",
+                        color=0x6f42c1,  # Purple for GitHub releases
+                        url=release['html_url'],
+                        timestamp=datetime.fromisoformat(release['published_at'].replace('Z', '+00:00'))
+                    )
+
+                    embed.add_field(
+                        name="Release Name",
+                        value=release['name'],
+                        inline=True
+                    )
+
+                    embed.add_field(
+                        name="Author",
+                        value=release['author'],
+                        inline=True
+                    )
+
+                    embed.add_field(
+                        name="Previous",
+                        value=release_info['previous_tag'],
+                        inline=True
+                    )
+
+                    # Truncate release notes to first 5 lines
+                    body = release.get('body', '')
+                    if body:
+                        lines = body.split('\n')
+                        truncated = '\n'.join(lines[:5])
+                        if len(lines) > 5:
+                            truncated += f"\n\n[more...]({release['html_url']})"
+
+                        embed.add_field(
+                            name="Release Notes",
+                            value=truncated[:1024] if truncated else "No release notes",
+                            inline=False
+                        )
+
+                    # Send to channels subscribed to this project's subsystem name
+                    await self.send_to_subscribed_channels(project['name'], embed=embed)
+
+        except Exception as e:
+            logger.error(f"Error checking GitHub releases: {e}")
 
     @tasks.loop(minutes=30)
     async def check_subsystem_activity(self):
