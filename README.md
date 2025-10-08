@@ -5,6 +5,7 @@ A Discord bot that monitors Linux kernel releases and subsystem activity, postin
 ## Features
 
 - **Kernel Release Monitoring**: Automatically detects new Linux kernel tags and releases from git.kernel.org
+- **GitHub Project Monitoring**: Tracks new releases for configured GitHub repositories (e.g., ndctl)
 - **Subsystem Activity Tracking**: Monitors specified mailing lists for:
   - Merged PR notifications from pr-bot
   - [GIT PULL] request emails
@@ -77,7 +78,7 @@ Then edit `config.json` with your settings:
       {
         "guild_id": 1234567890,
         "channel": "releases",
-        "subsystems": ["kernel-release"]
+        "subsystems": ["kernel-release", "ndctl-release"]
       }
     ]
   },
@@ -98,11 +99,21 @@ Then edit `config.json` with your settings:
       }
     ]
   },
+  "github_projects": [
+    {
+      "name": "ndctl-release",
+      "repo": "pmem/ndctl",
+      "description": "ndctl - Non-Volatile Memory Device Control"
+    }
+  ],
   "phb_url": "https://phb-crystal-ball.sipsolutions.net/"
 }
 ```
 
-**Note**: `"*"` includes all subsystems and kernel releases. Use `"kernel-release"` to subscribe only to kernel/RC announcements.
+**Notes**:
+- `"*"` includes all subsystems and kernel releases (NOT GitHub releases)
+- Use `"kernel-release"` to subscribe to kernel/RC announcements
+- Use GitHub project names like `"ndctl-release"` to subscribe to GitHub releases
 
 ### 4. Run the Bot
 

@@ -9,7 +9,7 @@
       {
         "guild_id": 1420254013458223158,
         "channel": "bot-test1",
-        "subsystems": ["linux-cxl", "nvdimm", "kernel-release"]
+        "subsystems": ["linux-cxl", "nvdimm", "kernel-release", "ndctl-release"]
       }
     ]
   },
@@ -30,5 +30,12 @@
       }
     ]
   },
+  "github_projects": [
+    {
+      "name": "ndctl-release",
+      "repo": "pmem/ndctl",
+      "description": "ndctl - Non-Volatile Memory Device Control"
+    }
+  ],
   "phb_url": "https://phb-crystal-ball.sipsolutions.net/"
 }

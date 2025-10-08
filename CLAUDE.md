@@ -19,7 +19,15 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
   - Channels can explicitly subscribe to `"kernel-release"` without `"*"`
 - **Fixed Issue**: Version sorting was broken - stable releases were sorting lower than RCs
 
-### 2. Subsystem Monitoring
+### 2. GitHub Project Monitoring
+- **Source**: GitHub API (api.github.com/repos/{owner}/{repo}/releases/latest)
+- **Function**: Detects new GitHub releases for configured projects
+- **Filtering**: Only monitors published releases (no prereleases or drafts)
+- **Subscription**: Each project gets a unique subsystem name (e.g., `"ndctl-release"`)
+- **Display**: Shows release tag, name, author, and truncated release notes (first 5 lines)
+- **Configuration**: Projects defined in `github_projects` array with name, repo, and description
+
+### 3. Subsystem Monitoring
 - **Sources**: Configured lore.kernel.org mailing lists
 - **Monitored**:
   - linux-cxl: https://lore.kernel.org/linux-cxl/
@@ -35,7 +43,7 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
   - Shows submit date, merge date, and time-to-merge duration
   - Displays commit hash and link to torvalds/linux.git merge commit
 
-### 3. Discord Commands
+### 4. Discord Commands
 
 #### `/ver` Command
 - **Function**: Shows latest kernel version
@@ -73,11 +81,12 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 - **Function**: Show bot information
 - **Output**: Version, git commit SHA, repository link, features list
 
-### 4. Multi-Server and Multi-Channel Support
+### 5. Multi-Server and Multi-Channel Support
 - **Subscription-based routing**: Each guild/channel can subscribe to specific subsystems
-- **Wildcard support**: Use `["*"]` to subscribe to all subsystems and kernel releases
+- **Wildcard support**: Use `["*"]` to subscribe to all subsystems and kernel releases (NOT GitHub releases)
 - **Selective filtering**: Subscribe to specific subsystems like `["linux-cxl", "nvdimm"]`
 - **Kernel release subscription**: Add `"kernel-release"` to receive kernel/RC announcements
+- **GitHub release subscription**: Add project names like `"ndctl-release"` to receive GitHub releases
 - **Commands**: Slash commands work in any channel
 - **Per-channel message tracking**: PR submission messages update independently per channel when merged
 
@@ -160,7 +169,7 @@ requirements.txt       # Python dependencies
       {
         "guild_id": 1420254013458223158,
         "channel": "bot-test1",
-        "subsystems": ["linux-cxl", "nvdimm", "kernel-release"]  // Specific subsystems + releases
+        "subsystems": ["linux-cxl", "nvdimm", "kernel-release", "ndctl-release"]
       }
     ]
   },
@@ -168,6 +177,13 @@ requirements.txt       # Python dependencies
     "check_interval_minutes": 60,  // How often to check for updates
     "subsystems": [...]    // List of {name, lore_url} objects
   },
+  "github_projects": [
+    {
+      "name": "ndctl-release",           // Subscription name
+      "repo": "pmem/ndctl",               // GitHub repo (owner/name)
+      "description": "ndctl - Non-Volatile Memory Device Control"
+    }
+  ],
   "phb_url": "https://phb-crystal-ball.sipsolutions.net/"
 }
 ```
