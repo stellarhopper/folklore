@@ -323,6 +323,9 @@ class KernelBot(commands.Bot):
                         self.message_tracker.store(pull['id'], channel_messages)
                         # Add to pending PR tracking
                         self.message_tracker.add_pending_pr(pull['id'], pull)
+                        logger.info(f"Posted and tracked PR: {pull['subject']} to {len(channel_messages)} channel(s)")
+                    else:
+                        logger.warning(f"No subscribers for PR in subsystem '{pull['subsystem']}': {pull['subject']}")
 
                 # Now check for merged PRs
                 merged_prs = await monitor.check_pr_bot_messages()
@@ -339,6 +342,11 @@ class KernelBot(commands.Bot):
                             if matching_pull:
                                 original_pr = matching_pull
                                 break
+
+                        if not original_pr:
+                            logger.warning(f"Could not find original PR for merge: {pr['subject']} (refs: {pr.get('refs', [])})")
+                    else:
+                        logger.warning(f"Merge PR has no refs: {pr['subject']}")
 
                     # Build the merged embed
                     embed = discord.Embed(
