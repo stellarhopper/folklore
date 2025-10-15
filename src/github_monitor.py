@@ -98,8 +98,7 @@ class GitHubMonitor:
                 if last_known:
                     new_releases.append({
                         'project': project,
-                        'release': latest_release,
-                        'previous_tag': last_known
+                        'release': latest_release
                     })
                     logger.info(f"New release for {project_name}: {release_tag} (was {last_known})")
 
