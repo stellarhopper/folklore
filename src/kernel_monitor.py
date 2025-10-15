@@ -79,8 +79,7 @@ class KernelMonitor:
 
             if old_tag:  # Don't notify on first run
                 return {
-                    'new_tag': current_tag,
-                    'previous_tag': old_tag
+                    'new_tag': current_tag
                 }
 
         return None
