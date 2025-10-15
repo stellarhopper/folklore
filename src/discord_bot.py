@@ -250,12 +250,6 @@ class KernelBot(commands.Bot):
                         inline=True
                     )
 
-                    embed.add_field(
-                        name="Previous",
-                        value=release_info['previous_tag'],
-                        inline=True
-                    )
-
                     # Truncate release notes to first 5 lines
                     body = release.get('body', '')
                     if body:
