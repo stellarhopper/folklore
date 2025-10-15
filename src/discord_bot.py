@@ -209,12 +209,6 @@ class KernelBot(commands.Bot):
                         inline=True
                     )
 
-                    embed.add_field(
-                        name="Previous",
-                        value=new_release['previous_tag'],
-                        inline=True
-                    )
-
                     # Send to channels subscribed to "kernel-release" (or "*")
                     await self.send_to_subscribed_channels('kernel-release', embed=embed)
 
