@@ -10,6 +10,11 @@
         "guild_id": 1420254013458223158,
         "channel": "bot-test1",
         "subsystems": ["linux-cxl", "nvdimm", "kernel-release", "ndctl-release"]
+      },
+      {
+        "guild_id": 1123803528377413762,
+        "channel": "maintainers",
+        "subsystems": ["linux-cxl", "nvdimm", "kernel-release", "ndctl-release"]
       }
     ]
   },
