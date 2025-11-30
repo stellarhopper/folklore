@@ -333,14 +333,15 @@ class KernelBot(commands.Bot):
                     # Check if we have Discord messages for the original PR submission
                     channel_messages = self.message_tracker.get_channel_messages_by_refs(pr.get('refs', []))
 
-                    # Try to get the original PR details from the refs
+                    # Try to get the original PR details from persistent storage
                     original_pr = None
                     if pr.get('refs'):
-                        # Look through the git_pulls we just processed to find the matching one
+                        # Look through pending PRs (persistent storage) to find the original submission
                         for ref in pr['refs']:
-                            matching_pull = next((p for p in git_pulls if p['id'] == ref), None)
-                            if matching_pull:
-                                original_pr = matching_pull
+                            if ref in self.message_tracker.pending_prs:
+                                original_pr = self.message_tracker.pending_prs[ref].copy()
+                                original_pr['id'] = ref  # Add the id field
+                                logger.info(f"Found original PR in pending storage: {ref}")
                                 break
 
                         if not original_pr:
