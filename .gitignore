@@ -9,6 +9,7 @@ bot.log
 # Runtime state
 message_map.json
 pending_prs.json
+seen_messages.json
 
 # Python cache
 __pycache__/
