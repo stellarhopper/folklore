@@ -23,7 +23,12 @@ class MessageTracker:
         try:
             if self.storage_path.exists():
                 with open(self.storage_path, 'r') as f:
-                    self.message_map = json.load(f)
+                    raw_map = json.load(f)
+                # Convert string channel IDs back to ints (JSON serializes int keys as strings)
+                self.message_map = {
+                    lore_id: {int(ch_id): msg_id for ch_id, msg_id in channels.items()}
+                    for lore_id, channels in raw_map.items()
+                }
                 logger.info(f"Loaded {len(self.message_map)} message mappings")
         except Exception as e:
             logger.error(f"Failed to load message mappings: {e}")
