@@ -126,6 +126,10 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 - **Per-channel tracking**: Each subscription channel gets independent message ID for editing
 - **Cleanup**: Automatically keeps only 1000 most recent entries to prevent unbounded growth
 - **Type handling**: Converts JSON string keys back to int channel IDs on load (JSON serializes int keys as strings)
+- **Seen messages tracking**: Persists seen message IDs with timestamps in `seen_messages.json`
+  - Prevents duplicate notifications on bot restart
+  - Time-based cleanup: removes entries older than 3 days (well beyond 24h query window)
+  - Migrates automatically from old list format to new timestamped dict format
 - **Edit flow**:
   1. PR submitted: Create Discord embed, post to subscribed channels, store message IDs
   2. PR merged: Lookup original message IDs via `refs`, edit messages in-place with merge details
@@ -162,6 +166,7 @@ main.py                 # Entry point, config loading, subscription validation
 config.json            # Bot configuration with subscriptions
 message_map.json       # Runtime: lore↔Discord message mappings
 pending_prs.json       # Runtime: unmerged PR tracking with metadata
+seen_messages.json     # Runtime: seen message IDs with timestamps (prevents duplicates)
 requirements.txt       # Python dependencies
 .env.example           # Environment template
 ```
