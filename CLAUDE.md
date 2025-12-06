@@ -82,7 +82,19 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 - **Function**: Show bot information
 - **Output**: Version, git commit SHA, repository link, features list
 
-### 5. Multi-Server and Multi-Channel Support
+### 5. Manual Merge Status Check (Reaction-Based)
+- **Trigger**: React with any emoji to a pending PR message
+- **Function**: Manually check if a PR has been merged and update the message
+- **Behavior**:
+  - Bot queries lore.kernel.org for pr-tracker-bot merge messages referencing the PR
+  - If found: Updates message to merged status in ALL channels where PR was posted
+  - If not found: Adds ❌ reaction to indicate no merge detected
+  - If PR data missing: Adds ⚠️ reaction
+  - On success: Adds ✅ reaction and updates embed with merge details
+- **Use Case**: Retroactively fix missed merge updates or verify merge status on demand
+- **Multi-channel**: One reaction updates the message in every channel where that PR was posted
+
+### 6. Multi-Server and Multi-Channel Support
 - **Subscription-based routing**: Each guild/channel can subscribe to specific subsystems
 - **Wildcard support**: Use `["*"]` to subscribe to all subsystems and kernel releases (NOT GitHub releases)
 - **Selective filtering**: Subscribe to specific subsystems like `["linux-cxl", "nvdimm"]`
@@ -113,9 +125,11 @@ This project is a Discord bot that monitors Linux kernel releases and subsystem 
 - **Threading support**: Uses email `refs` field from pr-tracker-bot to link merges back to original PRs
 - **Per-channel tracking**: Each subscription channel gets independent message ID for editing
 - **Cleanup**: Automatically keeps only 1000 most recent entries to prevent unbounded growth
+- **Type handling**: Converts JSON string keys back to int channel IDs on load (JSON serializes int keys as strings)
 - **Edit flow**:
   1. PR submitted: Create Discord embed, post to subscribed channels, store message IDs
   2. PR merged: Lookup original message IDs via `refs`, edit messages in-place with merge details
+  3. Manual check: React to any PR message to trigger merge status check across all channels
 
 ### Command Registration
 - **Issue Resolved**: Slash commands had signature mismatch errors
@@ -244,6 +258,9 @@ requirements.txt       # Python dependencies
 - **Pending PR tracking** - Tracks unmerged PRs with metadata (subject, subsystem, from, date, URL)
 - **/pending command** - Lists all pending PRs grouped by subsystem with age indicators
 - **Timeout warnings** - Highlights PRs older than 7 days in footer
+- **Channel ID type fix** - Correctly converts JSON string keys to int for message editing after bot restart
+- **Reaction-based merge check** - React to any pending PR message to manually trigger merge status lookup
+- **Multi-channel reaction update** - Single reaction updates PR status in all channels where posted
 
 ### ⚠️ Generated but Untested
 - **Kernel release monitoring** - Automated detection of new releases (60min intervals)
@@ -266,6 +283,20 @@ requirements.txt       # Python dependencies
 4. **Verify subscription filtering** with x86 messages (should appear in bot-spam only, not bot-test1)
 5. **Verify error recovery** by simulating network issues
 6. **Test message editing** with actual PR submission followed by merge
+
+## Known Issues and Fixes
+
+### Fixed: Channel ID Type Mismatch (v0.3+)
+- **Issue**: After bot restart, all PR merge message edits failed silently
+- **Cause**: JSON serializes dict keys as strings, but Discord channel.id is int, causing comparison failures
+- **Fix**: Convert string channel IDs back to ints when loading message_map.json
+- **Impact**: All merge updates now work correctly after restarts
+
+### Fixed: Missed Merge Updates
+- **Issue**: PRs submitted before bot restart wouldn't get merge updates
+- **Cause**: Original PR details were looked up from in-memory git_pulls list, not persistent storage
+- **Fix**: Look up original PR from pending_prs.json instead of current monitoring cycle
+- **Workaround**: React to any pending PR message to manually trigger merge check
 
 ## Future Considerations
 - Could add more subsystems to monitor

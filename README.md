@@ -16,6 +16,7 @@ A Discord bot that monitors Linux kernel releases and subsystem activity, postin
   - `/info` - Show bot version, git SHA, and features
 - **Per-channel Subscriptions**: Configure which subsystems each channel monitors
 - **Pending PR Tracking**: Automatically tracks unmerged PRs and warns about old ones
+- **Manual Merge Check**: React to any pending PR message to manually check and update merge status
 
 ## Setup
 
@@ -197,6 +198,11 @@ https://lore.kernel.org/all/?q=tc:subsystem@kernel.org
   - Shows age of each PR in days
   - Warns about PRs older than 7 days
   - Filtered by channel's subscribed subsystems
+- **Manual Merge Check**: React to any pending PR message with any emoji
+  - Bot queries lore.kernel.org for merge status
+  - Updates message in ALL channels if merge is found
+  - Adds ✅ reaction on success, ❌ if no merge found
+  - Useful for retroactively fixing missed merge updates
 
 ## Logs
 
