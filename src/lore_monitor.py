@@ -220,6 +220,56 @@ class LoreMonitor:
 
         return merge_messages
 
+    async def fetch_message_by_id(self, message_id: str) -> Optional[Dict]:
+        """Fetch a specific message from lore by its message ID"""
+        try:
+            # Query lore for this specific message
+            query = f"m:{message_id}"
+            logger.debug(f"Fetching message from lore: {query}")
+
+            messages = await self._run_lei_query(query)
+
+            if not messages or len(messages) == 0:
+                logger.warning(f"Message not found in lore: {message_id}")
+                return None
+
+            msg = messages[0]
+
+            # Parse message into our format
+            msg_date = datetime.now()
+            date_str = msg.get('dt', '')
+            try:
+                msg_date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            except:
+                pass
+
+            from_field = msg.get('f', [[None, '']])
+            sender = from_field[0][1] if from_field and from_field[0] else ''
+
+            lore_url = f"https://lore.kernel.org/all/{message_id}/"
+
+            # Determine subsystem from subject or default to unknown
+            subject = msg.get('s', '')
+            subsystem = 'unknown'
+            # Try to match against known subsystems
+            for sub in self.subsystems:
+                if sub['name'].lower() in subject.lower():
+                    subsystem = sub['name']
+                    break
+
+            return {
+                'id': message_id,
+                'subject': subject,
+                'date': msg_date.isoformat(),
+                'url': lore_url,
+                'subsystem': subsystem,
+                'from': sender
+            }
+
+        except Exception as e:
+            logger.error(f"Error fetching message {message_id} from lore: {e}")
+            return None
+
     async def check_git_pull_requests(self) -> List[Dict]:
         """Check for [GIT PULL] request emails (original requests, not pr-bot responses)"""
         new_messages = []

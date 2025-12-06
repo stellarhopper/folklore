@@ -177,12 +177,18 @@ class KernelBot(commands.Bot):
 
                 # Found a merge! Update the message
                 merge_pr = merge_messages[0]
+
+                # Try to get original PR from pending_prs first
                 original_pr = self.message_tracker.pending_prs.get(lore_msg_id)
 
+                # If not in pending_prs, fetch from lore
                 if not original_pr:
-                    logger.warning(f"Original PR not found in pending_prs for {lore_msg_id}")
-                    await message.add_reaction("⚠️")
-                    return
+                    logger.info(f"PR not in pending_prs, fetching from lore: {lore_msg_id}")
+                    original_pr = await monitor.fetch_message_by_id(lore_msg_id)
+                    if not original_pr:
+                        logger.warning(f"Could not fetch original PR from lore: {lore_msg_id}")
+                        await message.add_reaction("⚠️")
+                        return
 
                 # Build merged embed (same logic as in check_subsystem_activity)
                 embed = discord.Embed(
