@@ -8,9 +8,10 @@ from typing import List, Dict, Optional, Set
 logger = logging.getLogger(__name__)
 
 class LoreMonitor:
-    def __init__(self, subsystems: List[Dict]):
+    def __init__(self, subsystems: List[Dict], seen_messages_path: str = "seen_messages.json"):
         self.subsystems = subsystems
-        self.seen_messages: Set[str] = set()
+        self.seen_messages_path = seen_messages_path
+        self.seen_messages: Set[str] = self._load_seen_messages()
         self.lore_external = "https://lore.kernel.org/all/"
 
     async def __aenter__(self):
@@ -18,6 +19,38 @@ class LoreMonitor:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
+
+    def _load_seen_messages(self) -> Set[str]:
+        """Load seen messages from disk"""
+        try:
+            from pathlib import Path
+            path = Path(self.seen_messages_path)
+            if path.exists():
+                with open(path, 'r') as f:
+                    data = json.load(f)
+                    seen = set(data.get('seen', []))
+                    logger.info(f"Loaded {len(seen)} seen message IDs")
+                    return seen
+        except Exception as e:
+            logger.error(f"Failed to load seen messages: {e}")
+        return set()
+
+    def _save_seen_messages(self):
+        """Save seen messages to disk, keeping only recent entries"""
+        try:
+            from pathlib import Path
+            # Keep only the most recent 2000 entries to prevent unbounded growth
+            if len(self.seen_messages) > 2000:
+                # Convert to list, sort, and keep last 2000
+                # Since we can't sort message IDs meaningfully, just keep arbitrary subset
+                self.seen_messages = set(list(self.seen_messages)[-2000:])
+                logger.info(f"Trimmed seen_messages to 2000 entries")
+
+            path = Path(self.seen_messages_path)
+            with open(path, 'w') as f:
+                json.dump({'seen': list(self.seen_messages)}, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save seen messages: {e}")
 
     async def _run_lei_query(self, query: str, timeout: int = 30) -> List[Dict]:
         """Run a lei query and return parsed JSON results"""
@@ -178,6 +211,7 @@ class LoreMonitor:
                 if 'pr-tracker-bot@kernel.org' in sender:
                     if msg['id'] not in self.seen_messages:
                         self.seen_messages.add(msg['id'])
+                        self._save_seen_messages()
 
                         # Try to fetch the git commit URL from the message
                         commit_url = await self.get_pr_tracker_commit_url(msg['id'])
@@ -295,6 +329,7 @@ class LoreMonitor:
 
                     if msg['id'] not in self.seen_messages:
                         self.seen_messages.add(msg['id'])
+                        self._save_seen_messages()
                         new_messages.append(msg)
                         logger.info(f"New GIT PULL: {msg['subject']}")
 
