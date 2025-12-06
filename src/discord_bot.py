@@ -706,9 +706,11 @@ class KernelBot(commands.Bot):
         await interaction.response.defer()
 
         try:
-            # Get git commit SHA
+            # Get git commit SHA and subject
             git_sha = "unknown"
+            git_subject = ""
             try:
+                # Get short SHA
                 result = subprocess.run(
                     ['git', 'rev-parse', '--short', 'HEAD'],
                     capture_output=True,
@@ -717,8 +719,18 @@ class KernelBot(commands.Bot):
                 )
                 if result.returncode == 0:
                     git_sha = result.stdout.strip()
+
+                # Get commit subject
+                result = subprocess.run(
+                    ['git', 'log', '-1', '--format=%s'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    git_subject = result.stdout.strip()
             except Exception as e:
-                logger.warning(f"Could not get git SHA: {e}")
+                logger.warning(f"Could not get git info: {e}")
 
             # Create info embed
             embed = discord.Embed(
@@ -728,9 +740,17 @@ class KernelBot(commands.Bot):
                 url="https://github.com/stellarhopper/folklore"
             )
 
+            # Format version info with commit reference
+            version_info = f"`{__version__}`"
+            if git_sha != "unknown":
+                if git_subject:
+                    version_info += f" (git: `{git_sha}` {git_subject})"
+                else:
+                    version_info += f" (git: `{git_sha}`)"
+
             embed.add_field(
                 name="Version",
-                value=f"`{__version__}` (git: `{git_sha}`)",
+                value=version_info,
                 inline=False
             )
 
