@@ -176,7 +176,7 @@ class KernelBot(commands.Bot):
                     await msg.edit(embed=embed, content=content)
                 else:
                     await msg.edit(content=content)
-                logger.debug(f"Edited message {message_id} in {channel.guild.name}#{channel.name}")
+                logger.info(f"Edited message {message_id} in {channel.guild.name}#{channel.name}")
         except discord.NotFound:
             logger.debug(f"Message {message_id} not found in {channel.guild.name}#{channel.name}")
         except Exception as e:
