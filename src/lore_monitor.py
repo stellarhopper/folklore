@@ -3,7 +3,7 @@ import json
 import logging
 import subprocess
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ class LoreMonitor:
     def __init__(self, subsystems: List[Dict], seen_messages_path: str = "seen_messages.json"):
         self.subsystems = subsystems
         self.seen_messages_path = seen_messages_path
-        self.seen_messages: Set[str] = self._load_seen_messages()
+        self.seen_messages: Dict[str, float] = self._load_seen_messages()
         self.lore_external = "https://lore.kernel.org/all/"
 
     async def __aenter__(self):
@@ -20,35 +20,55 @@ class LoreMonitor:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    def _load_seen_messages(self) -> Set[str]:
+    def _load_seen_messages(self) -> Dict[str, float]:
         """Load seen messages from disk"""
         try:
             from pathlib import Path
+            import time
             path = Path(self.seen_messages_path)
             if path.exists():
                 with open(path, 'r') as f:
                     data = json.load(f)
-                    seen = set(data.get('seen', []))
-                    logger.info(f"Loaded {len(seen)} seen message IDs")
+
+                    # Handle both old format (list) and new format (dict with timestamps)
+                    if isinstance(data.get('seen'), list):
+                        # Old format: convert to dict with current timestamp
+                        current_time = time.time()
+                        seen = {msg_id: current_time for msg_id in data['seen']}
+                        logger.info(f"Converted {len(seen)} message IDs from old format")
+                    else:
+                        # New format: dict with timestamps
+                        seen = data.get('seen', {})
+                        logger.info(f"Loaded {len(seen)} seen message IDs")
+
                     return seen
         except Exception as e:
             logger.error(f"Failed to load seen messages: {e}")
-        return set()
+        return {}
 
     def _save_seen_messages(self):
-        """Save seen messages to disk, keeping only recent entries"""
+        """Save seen messages to disk, cleaning up old entries"""
         try:
             from pathlib import Path
-            # Keep only the most recent 2000 entries to prevent unbounded growth
-            if len(self.seen_messages) > 2000:
-                # Convert to list, sort, and keep last 2000
-                # Since we can't sort message IDs meaningfully, just keep arbitrary subset
-                self.seen_messages = set(list(self.seen_messages)[-2000:])
-                logger.info(f"Trimmed seen_messages to 2000 entries")
+            import time
+
+            # Clean up messages older than 3 days (well beyond 24h query window)
+            current_time = time.time()
+            three_days_ago = current_time - (3 * 24 * 60 * 60)
+
+            old_count = len(self.seen_messages)
+            self.seen_messages = {
+                msg_id: timestamp
+                for msg_id, timestamp in self.seen_messages.items()
+                if timestamp > three_days_ago
+            }
+
+            if len(self.seen_messages) < old_count:
+                logger.info(f"Cleaned up {old_count - len(self.seen_messages)} messages older than 3 days")
 
             path = Path(self.seen_messages_path)
             with open(path, 'w') as f:
-                json.dump({'seen': list(self.seen_messages)}, f, indent=2)
+                json.dump({'seen': self.seen_messages}, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to save seen messages: {e}")
 
@@ -210,7 +230,8 @@ class LoreMonitor:
                 # Check if this is from pr-tracker-bot (merge confirmation)
                 if 'pr-tracker-bot@kernel.org' in sender:
                     if msg['id'] not in self.seen_messages:
-                        self.seen_messages.add(msg['id'])
+                        import time
+                        self.seen_messages[msg['id']] = time.time()
                         self._save_seen_messages()
 
                         # Try to fetch the git commit URL from the message
@@ -328,7 +349,8 @@ class LoreMonitor:
                     '[git pull]' in subject.lower()):
 
                     if msg['id'] not in self.seen_messages:
-                        self.seen_messages.add(msg['id'])
+                        import time
+                        self.seen_messages[msg['id']] = time.time()
                         self._save_seen_messages()
                         new_messages.append(msg)
                         logger.info(f"New GIT PULL: {msg['subject']}")
