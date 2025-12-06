@@ -132,6 +132,148 @@ class KernelBot(commands.Bot):
         logger.info(f"Joined new guild: {guild.name}")
         logger.info("Note: Update config.json subscriptions and restart to monitor channels in this guild")
 
+    async def on_raw_reaction_add(self, payload):
+        """Handle reactions to messages - check for merge status updates"""
+        # Ignore bot's own reactions
+        if payload.user_id == self.user.id:
+            return
+
+        # Get the channel and message
+        channel = self.get_channel(payload.channel_id)
+        if not channel:
+            return
+
+        try:
+            message = await channel.fetch_message(payload.message_id)
+        except discord.NotFound:
+            return
+        except Exception as e:
+            logger.error(f"Error fetching message {payload.message_id}: {e}")
+            return
+
+        # Check if this is a PR submission message by looking for it in message_map
+        lore_msg_id = None
+        for lore_id, channel_messages in self.message_tracker.message_map.items():
+            if payload.channel_id in channel_messages and channel_messages[payload.channel_id] == payload.message_id:
+                lore_msg_id = lore_id
+                break
+
+        if not lore_msg_id:
+            logger.debug(f"Message {payload.message_id} not found in message tracker")
+            return
+
+        logger.info(f"Manual merge check requested for lore message: {lore_msg_id}")
+
+        # Check if there's a pr-tracker-bot merge message for this PR
+        try:
+            async with self.lore_monitor as monitor:
+                # Query for pr-tracker-bot messages that reference this message ID
+                merge_messages = await monitor.check_pr_bot_messages_for_refs([lore_msg_id])
+
+                if not merge_messages:
+                    logger.info(f"No merge found for {lore_msg_id}")
+                    await message.add_reaction("❌")
+                    return
+
+                # Found a merge! Update the message
+                merge_pr = merge_messages[0]
+                original_pr = self.message_tracker.pending_prs.get(lore_msg_id)
+
+                if not original_pr:
+                    logger.warning(f"Original PR not found in pending_prs for {lore_msg_id}")
+                    await message.add_reaction("⚠️")
+                    return
+
+                # Build merged embed (same logic as in check_subsystem_activity)
+                embed = discord.Embed(
+                    title="✅ PR Merged",
+                    description=f"**{merge_pr['subsystem']}**: {merge_pr['subject']}",
+                    color=0x00ff00,
+                    url=merge_pr['url']
+                )
+
+                embed.add_field(
+                    name="From",
+                    value=original_pr.get('from', 'Unknown'),
+                    inline=True
+                )
+
+                # Add dates
+                submit_date_obj = None
+                try:
+                    submit_date_obj = datetime.fromisoformat(original_pr['date'])
+                    submit_date_str = submit_date_obj.strftime('%Y-%m-%d %H:%M UTC')
+                except:
+                    submit_date_str = original_pr.get('date', 'Unknown')
+
+                merge_date_obj = None
+                try:
+                    merge_date_obj = datetime.fromisoformat(merge_pr['date'])
+                    merge_date_str = merge_date_obj.strftime('%Y-%m-%d %H:%M UTC')
+                except:
+                    merge_date_str = merge_pr.get('date', 'Unknown')
+
+                embed.add_field(
+                    name="Submit Date",
+                    value=submit_date_str,
+                    inline=True
+                )
+                embed.add_field(
+                    name="Merge Date",
+                    value=merge_date_str,
+                    inline=True
+                )
+
+                # Calculate duration
+                if submit_date_obj and merge_date_obj:
+                    duration = merge_date_obj - submit_date_obj
+                    days = duration.days
+                    hours = duration.seconds // 3600
+                    minutes = (duration.seconds % 3600) // 60
+
+                    if days > 0:
+                        duration_str = f"{days}d {hours}h"
+                    elif hours > 0:
+                        duration_str = f"{hours}h {minutes}m"
+                    else:
+                        duration_str = f"{minutes}m"
+
+                    embed.add_field(
+                        name="Time to Merge",
+                        value=duration_str,
+                        inline=True
+                    )
+
+                # Add commit URL if available
+                if 'commit_url' in merge_pr:
+                    commit_hash = merge_pr['commit_url'].split('/')[-1]
+                    embed.add_field(
+                        name="Merge Commit",
+                        value=f"[`{commit_hash[:12]}`]({merge_pr['commit_url']})",
+                        inline=False
+                    )
+
+                # Edit ALL messages for this PR across all channels
+                channel_messages = self.message_tracker.get_channel_messages(lore_msg_id)
+                if channel_messages:
+                    for ch_id, msg_id in channel_messages.items():
+                        await self.edit_channel_message(ch_id, msg_id, embed=embed)
+                    logger.info(f"Successfully updated merge status for {lore_msg_id} in {len(channel_messages)} channel(s)")
+                else:
+                    # Fallback: just edit the current message if not in message_map
+                    await message.edit(embed=embed)
+                    logger.info(f"Successfully updated merge status for {lore_msg_id}")
+
+                # Add success reaction to the message that triggered the check
+                await message.add_reaction("✅")
+
+                # Mark as merged in pending_prs
+                self.message_tracker.mark_pr_merged(lore_msg_id)
+
+        except Exception as e:
+            logger.error(f"Error checking merge status: {e}")
+            await message.add_reaction("❌")
+
     async def send_to_subscribed_channels(self, subsystem: str, content=None, embed=None):
         """Send a message to channels subscribed to this subsystem, return dict of {channel_id: message_id}"""
         if not self.subscriptions:

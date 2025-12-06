@@ -189,6 +189,37 @@ class LoreMonitor:
 
         return new_messages
 
+    async def check_pr_bot_messages_for_refs(self, ref_message_ids: List[str]) -> List[Dict]:
+        """Check for pr-tracker-bot messages that reference specific message IDs"""
+        if not ref_message_ids:
+            return []
+
+        merge_messages = []
+
+        for subsystem in self.subsystems:
+            # Query wider time range since we're looking for a specific merge
+            messages = await self.fetch_lore_messages(subsystem, days_back=30)
+
+            for msg in messages:
+                sender = msg.get('from', '').lower()
+
+                # Check if this is from pr-tracker-bot (merge confirmation)
+                if 'pr-tracker-bot@kernel.org' in sender:
+                    # Check if this message references any of the given message IDs
+                    msg_refs = msg.get('refs', [])
+                    for ref_id in ref_message_ids:
+                        if ref_id in msg_refs:
+                            # Try to fetch the git commit URL from the message
+                            commit_url = await self.get_pr_tracker_commit_url(msg['id'])
+                            if commit_url:
+                                msg['commit_url'] = commit_url
+
+                            merge_messages.append(msg)
+                            logger.info(f"Found merge for {ref_id}: {msg['subject']}")
+                            break
+
+        return merge_messages
+
     async def check_git_pull_requests(self) -> List[Dict]:
         """Check for [GIT PULL] request emails (original requests, not pr-bot responses)"""
         new_messages = []
