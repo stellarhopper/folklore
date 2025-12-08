@@ -20,6 +20,7 @@
   },
   "kernel": {
     "check_interval_minutes": 60,
+    "query_window_days": 2,
     "subsystems": [
       {
         "name": "linux-cxl",

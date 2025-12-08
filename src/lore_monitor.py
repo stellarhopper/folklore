@@ -8,8 +8,9 @@ from typing import List, Dict, Optional
 logger = logging.getLogger(__name__)
 
 class LoreMonitor:
-    def __init__(self, subsystems: List[Dict], seen_messages_path: str = "seen_messages.json"):
+    def __init__(self, subsystems: List[Dict], query_window_days: int, seen_messages_path: str = "seen_messages.json"):
         self.subsystems = subsystems
+        self.query_window_days = query_window_days
         self.seen_messages_path = seen_messages_path
         self.seen_messages: Dict[str, float] = self._load_seen_messages()
         self.lore_external = "https://lore.kernel.org/all/"
@@ -145,12 +146,16 @@ class LoreMonitor:
                       f"Consider adding 'mailing_list' field to config.")
         return None
 
-    async def fetch_lore_messages(self, subsystem: Dict, days_back: int = 1) -> List[Dict]:
+    async def fetch_lore_messages(self, subsystem: Dict, days_back: int = None) -> List[Dict]:
         """Fetch recent messages from a lore mailing list using lei"""
         try:
             mailing_list = self._extract_mailing_list(subsystem)
             if not mailing_list:
                 return []
+
+            # Use configured query window if not explicitly specified
+            if days_back is None:
+                days_back = self.query_window_days
 
             # Build lei query
             # tc: is for "to or cc", dt: is for date range
