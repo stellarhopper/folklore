@@ -127,27 +127,22 @@ class LoreMonitor:
 
     def _extract_mailing_list(self, subsystem: Dict) -> Optional[str]:
         """Extract mailing list address from subsystem config"""
-        lore_url = subsystem['lore_url']
+        # First, check if mailing_list is explicitly configured
+        if 'mailing_list' in subsystem:
+            return subsystem['mailing_list']
 
-        # For search URLs like https://lore.kernel.org/all/?q=tc:x86@kernel.org
+        # Fallback: For search URLs like https://lore.kernel.org/all/?q=tc:x86@kernel.org
+        lore_url = subsystem['lore_url']
         if '?q=tc:' in lore_url:
             import re
             match = re.search(r'tc:([^\s&]+)', lore_url)
             if match:
                 return match.group(1)
 
-        # Map subsystem names to known mailing list addresses
-        list_mappings = {
-            'linux-cxl': 'linux-cxl@vger.kernel.org',
-            'nvdimm': 'nvdimm@lists.linux.dev',
-            'x86': 'x86@kernel.org',
-        }
-
+        # If we get here, we couldn't determine the mailing list
         name = subsystem['name']
-        if name in list_mappings:
-            return list_mappings[name]
-
-        logger.warning(f"Could not determine mailing list for {name} from {lore_url}")
+        logger.warning(f"Could not determine mailing list for {name} from {lore_url}. "
+                      f"Consider adding 'mailing_list' field to config.")
         return None
 
     async def fetch_lore_messages(self, subsystem: Dict, days_back: int = 1) -> List[Dict]:

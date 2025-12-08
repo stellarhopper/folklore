@@ -23,15 +23,18 @@
     "subsystems": [
       {
         "name": "linux-cxl",
-        "lore_url": "https://lore.kernel.org/linux-cxl/"
+        "lore_url": "https://lore.kernel.org/linux-cxl/",
+        "mailing_list": "linux-cxl@vger.kernel.org"
       },
       {
         "name": "nvdimm",
-        "lore_url": "https://lore.kernel.org/nvdimm/"
+        "lore_url": "https://lore.kernel.org/nvdimm/",
+        "mailing_list": "nvdimm@lists.linux.dev"
       },
       {
         "name": "tsm",
-        "lore_url": "https://lore.kernel.org/linux-coco/"
+        "lore_url": "https://lore.kernel.org/linux-coco/",
+        "mailing_list": "linux-coco@lists.linux.dev"
       },
       {
         "name": "x86",
