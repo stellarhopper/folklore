@@ -61,7 +61,11 @@ class KernelBot(commands.Bot):
 
         # Initialize monitors
         self.kernel_monitor = KernelMonitor()
-        self.lore_monitor = LoreMonitor(self.config['kernel']['subsystems'])
+        query_window_days = self.config['kernel'].get('query_window_days', 1)
+        self.lore_monitor = LoreMonitor(
+            self.config['kernel']['subsystems'],
+            query_window_days=query_window_days
+        )
 
         # Initialize GitHub monitor if projects are configured
         github_projects = self.config.get('github_projects', [])
