@@ -54,10 +54,17 @@ echo "✓ Installed b4 $(b4 --version)"
 # Setup MQTT credentials
 echo "[5/7] Setting up MQTT credentials..."
 if [ ! -f "/home/stellarhopper/folklore/deploy/.env.mqtt" ]; then
+    read -p "Enter MQTT broker hostname: " mqtt_broker
+    read -p "Enter MQTT username: " mqtt_username
     read -sp "Enter MQTT password: " mqtt_password
     echo
-    echo "MQTT_PASSWORD=$mqtt_password" > /home/stellarhopper/folklore/deploy/.env.mqtt
-    chmod 600 /home/stellarhopper/folklore/deploy/.env.mqtt
+    # Create with restrictive permissions before writing the password to it
+    install -m 600 /dev/null /home/stellarhopper/folklore/deploy/.env.mqtt
+    cat > /home/stellarhopper/folklore/deploy/.env.mqtt <<EOF
+MQTT_BROKER=$mqtt_broker
+MQTT_USERNAME=$mqtt_username
+MQTT_PASSWORD=$mqtt_password
+EOF
     echo "✓ Created .env.mqtt with credentials"
 else
     echo ".env.mqtt already exists, skipping"

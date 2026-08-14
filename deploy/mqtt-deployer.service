@@ -14,10 +14,9 @@ StandardOutput=append:/var/log/folklore-bot/mqtt-deployer.log
 StandardError=append:/var/log/folklore-bot/mqtt-deployer.log
 
 # Environment
+# Broker, username and password all come from .env.mqtt (not in git)
 Environment="PYTHONUNBUFFERED=1"
-Environment="MQTT_BROKER=7bc60cfe8a37497d8f627acb66ce353c.s1.eu.hivemq.cloud"
 Environment="MQTT_PORT=8883"
-Environment="MQTT_USERNAME=folklore-mqtt"
 EnvironmentFile=/home/stellarhopper/folklore/deploy/.env.mqtt
 
 # Security

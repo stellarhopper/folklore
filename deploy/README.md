@@ -5,10 +5,10 @@ Automatic deployment system using MQTT for the Folklore Discord bot.
 ## Architecture
 
 ```
-GitHub Push → GitHub Actions → MQTT Broker (HiveMQ) → Raspberry Pi → Deploy
+GitHub Push → GitHub Actions → MQTT Broker → Raspberry Pi → Deploy
 ```
 
-**No ports open on your Pi!** The Pi connects outbound to HiveMQ Cloud.
+**No ports open on your Pi!** The Pi connects outbound to the MQTT broker.
 
 ## Setup on Raspberry Pi
 
@@ -21,7 +21,7 @@ GitHub Push → GitHub Actions → MQTT Broker (HiveMQ) → Raspberry Pi → Dep
    - Clone/update the repository
    - Create log directories
    - Install systemd services
-   - Prompt for MQTT password
+   - Prompt for MQTT broker, username and password
 
 2. **Add your Discord token:**
    ```bash
@@ -42,19 +42,30 @@ GitHub Push → GitHub Actions → MQTT Broker (HiveMQ) → Raspberry Pi → Dep
 
 ## Setup on GitHub
 
-Add the MQTT password as a GitHub secret:
+Add the MQTT connection details as GitHub secrets. Go to your repo → Settings →
+Secrets and variables → Actions, and add all three:
 
-1. Go to your repo → Settings → Secrets and variables → Actions
-2. Click "New repository secret"
-3. Name: `MQTT_PASSWORD`
-4. Value: `REDACTED-ROTATED-CREDENTIAL`
-5. Click "Add secret"
+| Secret | Value |
+|---|---|
+| `MQTT_BROKER` | Broker hostname |
+| `MQTT_USERNAME` | MQTT username |
+| `MQTT_PASSWORD` | MQTT password |
+
+Or from the command line, which keeps the values out of your shell history:
+
+```bash
+gh secret set MQTT_BROKER
+gh secret set MQTT_USERNAME
+gh secret set MQTT_PASSWORD
+```
+
+The deploy workflow fails fast with a clear error if any of the three is missing.
 
 ## How it Works
 
 ### On Boot
 - `folklore-bot.service` starts the Discord bot automatically
-- `mqtt-deployer.service` connects to HiveMQ and listens for deployment messages
+- `mqtt-deployer.service` connects to the MQTT broker and listens for deployment messages
 
 ### On Git Push
 1. You push to `main` branch
@@ -108,13 +119,13 @@ sudo systemctl stop mqtt-deployer
 - `mqtt_subscriber.py` - Python script that listens for MQTT deploy messages
 - `deploy.sh` - Deployment script (git pull, install deps, restart)
 - `setup-pi.sh` - One-time setup script for the Pi
-- `.env.mqtt` - MQTT credentials (not in git)
+- `.env.mqtt` - MQTT broker, username and password (not in git)
 
 ## Security
 
-- MQTT password stored in `.env.mqtt` (600 permissions, not in git)
+- MQTT credentials stored in `.env.mqtt` (600 permissions, not in git)
 - Discord token stored in `.env` (not in git)
-- HiveMQ uses TLS encryption (port 8883)
+- Broker connection uses TLS encryption (port 8883)
 - No inbound ports required on Raspberry Pi
 - Services run as non-root user `stellarhopper`
 
@@ -132,8 +143,10 @@ Check credentials:
 cat /home/stellarhopper/folklore/deploy/.env.mqtt
 ```
 
-Test MQTT connection:
+Test MQTT connection (the script reads its config from the environment, so
+source the credentials first):
 ```bash
+set -a; source /home/stellarhopper/folklore/deploy/.env.mqtt; set +a
 python3 /home/stellarhopper/folklore/deploy/mqtt_subscriber.py
 ```
 
@@ -144,13 +157,16 @@ Check GitHub Actions workflow ran successfully:
 
 Manually trigger a deployment for testing:
 ```bash
-# From any machine with mosquitto-clients installed
+# From any machine with mosquitto-clients installed.
+# Source the password rather than typing it, so it stays out of shell history.
+source deploy/.env.mqtt
+
 mosquitto_pub \
-  -h 7bc60cfe8a37497d8f627acb66ce353c.s1.eu.hivemq.cloud \
+  -h "$MQTT_BROKER" \
   -p 8883 \
   -t "folklore/deploy" \
   -m "deploy" \
-  -u "folklore-mqtt" \
-  -P "REDACTED-ROTATED-CREDENTIAL" \
+  -u "$MQTT_USERNAME" \
+  -P "$MQTT_PASSWORD" \
   --capath /etc/ssl/certs/
 ```

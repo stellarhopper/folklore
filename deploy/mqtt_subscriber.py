@@ -11,10 +11,10 @@ import time
 import ssl
 import paho.mqtt.client as mqtt
 
-# MQTT Configuration
-MQTT_BROKER = os.environ.get('MQTT_BROKER', '7bc60cfe8a37497d8f627acb66ce353c.s1.eu.hivemq.cloud')
+# MQTT Configuration - all credentials come from deploy/.env.mqtt
+MQTT_BROKER = os.environ.get('MQTT_BROKER')
 MQTT_PORT = int(os.environ.get('MQTT_PORT', '8883'))
-MQTT_USERNAME = os.environ.get('MQTT_USERNAME', 'folklore-mqtt')
+MQTT_USERNAME = os.environ.get('MQTT_USERNAME')
 MQTT_PASSWORD = os.environ.get('MQTT_PASSWORD')
 MQTT_TOPIC = 'folklore/deploy'
 
@@ -69,8 +69,16 @@ def on_disconnect(client, userdata, rc):
 
 def main():
     """Main function"""
-    if not MQTT_PASSWORD:
-        print("ERROR: MQTT_PASSWORD environment variable not set!")
+    missing = [
+        name for name, value in (
+            ('MQTT_BROKER', MQTT_BROKER),
+            ('MQTT_USERNAME', MQTT_USERNAME),
+            ('MQTT_PASSWORD', MQTT_PASSWORD),
+        ) if not value
+    ]
+    if missing:
+        print(f"ERROR: environment variable(s) not set: {', '.join(missing)}")
+        print("Populate them in deploy/.env.mqtt")
         sys.exit(1)
 
     # Create MQTT client
