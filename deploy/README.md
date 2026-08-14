@@ -75,8 +75,25 @@ The deploy workflow fails fast with a clear error if any of the three is missing
 5. Pi runs `deploy/deploy.sh`:
    - Pulls latest code
    - Installs dependencies
+   - Syncs systemd units into `/etc` if they differ, and reloads systemd
    - Restarts the bot
 6. Bot automatically runs with new code
+
+### Systemd unit changes
+
+`deploy.sh` compares `deploy/*.service` against the copies in
+`/etc/systemd/system/` and reinstalls any that differ, followed by a
+`daemon-reload`. Without this, unit file edits land in git but never take
+effect on the Pi.
+
+One exception: `mqtt-deployer` is never restarted by `deploy.sh`. The script
+runs as a child of that service, and `KillMode=control-group` means restarting
+it would kill the deployment mid-run. When its unit changes, the deploy log
+says so and you apply it manually:
+
+```bash
+sudo systemctl restart mqtt-deployer
+```
 
 ## Manual Operations
 
