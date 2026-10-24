@@ -61,6 +61,23 @@ gh secret set MQTT_PASSWORD
 
 The deploy workflow fails fast with a clear error if any of the three is missing.
 
+## The broker
+
+An EMQX Cloud Serverless deployment, on the free quota (spend limit 0). It's
+shared with the other bots that deploy this way (pinbot among them): each bot
+keeps to its own `<bot>/…` topics, and each machine gets its own login, limited
+by an ACL to what it needs.
+
+| Login | Used by | Allowed |
+|---|---|---|
+| `github-deploy` | GitHub Actions, in every bot's repo | publish `+/deploy` |
+| `rpi5-folklore` | `mqtt-deployer` (`deploy/.env.mqtt`) | subscribe `folklore/deploy` |
+
+A final **All Users** rule under Access Control → Authorization denies `#` for
+publish and subscribe, so anything not listed is refused. EMQX stops a
+deployment with no client connected for 30 days; the deployers are always
+connected, so in practice it never idles.
+
 ## How it Works
 
 ### On Boot
